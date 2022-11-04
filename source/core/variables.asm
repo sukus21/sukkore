@@ -1,5 +1,4 @@
 INCLUDE "hardware.inc"
-INCLUDE "entitysystem.inc"
 
 ;Allocate 256 bytes for the stack, just to be safe
 stack_size equ $100
