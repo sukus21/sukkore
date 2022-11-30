@@ -1,0 +1,22 @@
+Mandatory entity information:
+10 bytes for vars
+1 byte for collision mask
+3 bytes for extended data pointer
+2 bytes for step function
+
+Entity sizes:
+half-size: 16-bytes
+full-size: 32-bytes
+double-size: 64 bytes
+
+Per-entity fields:
+* Damage
+* Damage 2
+* Also damage
+* Colour (aka Damage)
+* Ouchiness
+* Agony
+* Damage
+* Pain-scale
+
+
