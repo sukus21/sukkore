@@ -4,6 +4,28 @@ Mandatory entity information:
 3 bytes for extended data pointer
 2 bytes for step function
 
+Mandatory information layout:
+	0x00 Extended data pointer bank (null with 0x00 or 0xFF, discuss!!!)
+	If in use:
+		0x01-0x02 Step function pointer
+		0x03: Next used entity
+	If free:
+		0x01: Free slot size
+		0x03: Next free slot with same size
+
+
+
+ld a, c
+swap a
+sub a, c
+ld b, a
+
+mov b to a
+swap b
+sub a from b
+set c to a
+
+
 Entity sizes:
 half-size: 16-bytes
 full-size: 32-bytes
@@ -18,5 +40,14 @@ Per-entity fields:
 * Agony
 * Damage
 * Pain-scale
+
+
+
+Allocation:
+	Get next slot of appropiate size by reading pointer
+		If none are free, split one of next size, and set first-pointer to other half
+		Otherwise, set first-pointer to next-pointer of taken slot
+	
+
 
 
