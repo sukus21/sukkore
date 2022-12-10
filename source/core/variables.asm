@@ -21,6 +21,12 @@ variables_init::
     ld de, var_w0_end - var_w0 ;Data length
     call memcopy
 
+    ;Copy WRAMX variables
+    ld hl, w_entsys ;Start of variable space
+    ld bc, var_wx ;Initial variable data
+    ld de, var_wx_end - var_wx ;Data length
+    call memcopy
+
     ;Copy HRAM variables
     ld hl, h_variables ;Start of variable space
     ld bc, var_h ;Initial variable data
@@ -79,6 +85,8 @@ var_w0:
         w_entsys_first16:: dw $0000
         w_entsys_first32:: dw $0000
         w_entsys_first64:: dw w_entsys
+
+        w_entsys_testvar:: db $00
     ENDL
     var_w0_end:
 ;
@@ -89,7 +97,9 @@ var_wx:
         w_entsys::
             REPT 256
                 w_entsys_bank_\@: db $00
-                w_entsys_next_\@: db $F0
+                w_entsys_next_\@: db $40
+                w_entsys_step_\@: dw $0000
+                ds 12
             ENDR
         ;
     ENDL
