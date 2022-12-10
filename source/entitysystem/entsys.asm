@@ -44,3 +44,120 @@ entsys_step::
         ret
 	;
 ;
+
+; Address of new entity is stored in BC.
+; Destroys: all
+entsys_new16::
+    ;Load next free slot to HL
+    ld hl, w_entsys_first16
+    ld a, [hl+]
+    ld h, [hl]
+    ld l, a
+
+    ;Jump to different path if we're out of 16-bit slots
+    bit 7, h
+    jr z, .out_of_16
+
+    ;Store allocated slot in BC
+    ld b, h
+    ld c, l
+
+    ;Load next free slot into DE
+    set 1, l
+    ld a, [hl+]
+    ld e, a
+    ld d, [hl]
+
+    ;Save next free slot for next allocation
+    ld hl, w_entsys_first16
+    ld [hl+], e
+    ld [hl], d
+
+    ret
+
+    .out_of_16
+        call entsys_new32
+        
+        ;Save buddy for next allocation
+        ld hl, w_entsys_first16
+        ld a, c
+        ld [hl+], a
+        ld [hl], b
+
+        ;Make buddy a single-chunk slot
+        ld h, b
+        ld l, c
+        inc l
+        ld [hl] $10
+        set 1, l
+        ld [hl] $00
+
+        ;Get new slot
+        add a, $11
+        ld c, a
+
+        ;Make new slot a single-chunk slot
+        ld l, c
+        ld [hl] $10
+
+        dec c
+        ret
+        
+; Address of new entity is stored in BC.
+; Destroys: all
+entsys_new32::
+    ;Load next free slot to HL
+    ld hl, w_entsys_first32
+    ld a, [hl+]
+    ld h, [hl]
+    ld l, a
+
+    ;Jump to different path if we're out of 16-bit slots
+    bit 7, h
+    jr z, .out_of_32
+
+    ;Store allocated slot in BC
+    ld b, h
+    ld c, l
+
+    ;Load next free slot into DE
+    set 1, l
+    ld a, [hl+]
+    ld e, a
+    ld d, [hl]
+
+    ;Save next free slot for next allocation
+    ld hl, w_entsys_first32
+    ld [hl+], e
+    ld [hl], d
+
+    ret
+
+    .out_of_32
+        call entsys_new64
+        
+        ;Save buddy for next allocation
+        ld hl, w_entsys_first32
+        ld a, c
+        ld [hl+], a
+        ld [hl], b
+
+        ;Make buddy a single-chunk slot
+        ld h, b
+        ld l, c
+        inc l
+        ld [hl] $20
+        set 1, l
+        ld [hl] $00
+
+        ;Get new slot
+        add a, $21
+        ld c, a
+
+        ;Make new slot a single-chunk slot
+        ld l, c
+        ld [hl] $20
+
+        dec c
+        ret
+
