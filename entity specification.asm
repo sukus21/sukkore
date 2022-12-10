@@ -6,12 +6,11 @@
 
 ; Mandatory information layout:
 ; 	0x00 Extended data pointer bank (null with 0x00 or 0xFF, discuss!!!)
+;	0x01: Relpointer to next used entity
 ;	If in use:
-;		0x01: Relpointer to next used entity
 ;		0x02-0x03: Step function pointer
 ;	If free:
-;		0x01: Free slot size/relpointer to next used
-;		0x03: Relpointer to next free slot with same size
+;		0x02-0x03: Relpointer to next free slot with same size
 
 
 
@@ -59,6 +58,7 @@ entsys_execute::
 		
 		;Is this entity in use or not?
 		ld a, [hl+]
+		push hl
 		IF DEF(NULLBANK)
 			inc a
 		ELSE
@@ -70,7 +70,6 @@ entsys_execute::
 
 		;Entity is in use, apply bank and read pointer
 		ld [$2000], a
-		push hl ;Save pointer to relative pointer to next
 		inc hl
 		ld a, [hl+]
 		ld h, [hl]

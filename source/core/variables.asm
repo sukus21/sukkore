@@ -38,15 +38,6 @@ var_w0:
     LOAD "WRAM0 VARIABLES", WRAM0, ALIGN[8]
         w_variables:
 
-        ;Tile update queue
-        w_screen_update_list_count:: db $00
-        w_screen_update_list_head:: db $02
-        w_screen_update_list::
-            REPT $7F
-            dw $FFFF
-            ENDR
-        ;
-
         ;Sprite stuff
         w_oam_mirror::
             REPT $A4
