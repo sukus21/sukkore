@@ -39,10 +39,7 @@ var_w0:
         w_variables:
 
         ;Sprite stuff
-        w_oam_mirror::
-            REPT $A4
-            db $00
-            ENDR
+        w_oam_mirror:: ds $A4, $00
         
         ASSERT low(w_oam_mirror) == 0
 
@@ -77,8 +74,26 @@ var_w0:
         w_intro_state:: db $00
         w_intro_timer:: db $00
         ;
+
+        ;Entity system variables
+        w_entsys_first16:: dw $0000
+        w_entsys_first32:: dw $0000
+        w_entsys_first64:: dw w_entsys
     ENDL
     var_w0_end:
+;
+
+; Contains the initial values of all variables in WRAMX.
+var_wx:
+    LOAD "WRAMX VARIABLES", WRAMX, ALIGN[8]
+        w_entsys::
+            REPT 256
+                w_entsys_bank_\@: db $00
+                w_entsys_next_\@: db $F0
+            ENDR
+        ;
+    ENDL
+    var_wx_end:
 ;
 
 ; Contains the initial values for all HRAM variables.
