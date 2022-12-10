@@ -75,6 +75,17 @@
               "$rgbdserror",
               "$rgbdslinkerror"
             ]
+        },
+        {
+            "label": "build clean",
+            "dependsOrder": "sequence",
+            "dependsOn": ["clean", "build"],
+            "problemMatcher": [],
+            "presentation": {
+                "clear": true,
+                "panel": "dedicated",
+                "reveal": "never"
+            },
         }
     ]
 }
