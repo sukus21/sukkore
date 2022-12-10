@@ -21,5 +21,6 @@ SECTION "MAIN", ROM0[$0150]
 main::
     
     ;Endless loop for now
+    call entsys_step
     jr main
 ;
