@@ -4,11 +4,15 @@ INCLUDE "color.inc"
 SECTION "ERROR SCREEN VECTOR", ROM0[$0038]
     
 ; Switches bank and jumps.
-; Should be called using `rst` instruction.
+; Should be called using an `rst` instruction.
 ; Lives in ROM0.
+; TODO: make sure this also works in GBC mode.
+;
+; Input:
+; - `hl`: Pointer to error message
 v_error::
     ld a, bank(sinewave)
-    ld [$2000], a
+    ld [rROMB0], a
     jp sinewave
 ;
 
@@ -17,8 +21,7 @@ v_error::
 SECTION "ERROR SCREEN", ROMX, ALIGN[8]
 
 ;Just a bunch of 0's
-zero:
-    ds 512, $00
+zero: ds 512, $00
 
 ;Gradual sine curve
 grad:
@@ -43,13 +46,18 @@ ANGLE = ANGLE + 256.0
 ;Background tileset
 error_tiles:
     INCBIN "errorscreen/face.tls"
-    error_tiles_e:
+    .end
 ;
 
 ;Sprite tiles
 error_sprites:
     INCBIN "errorscreen/sprites.tls"
-    error_sprites_e:
+    .end
+;
+
+error_font:
+    INCBIN "errorscreen/font.tls"
+    .end
 ;
 
 ;Tilemap data
@@ -61,6 +69,7 @@ error_map:
 ;Sprite initialization data
 error_spritedata:
     INCBIN "errorscreen/objdata.bin"
+    .end
 ;
 
 ;Background palette
@@ -82,23 +91,66 @@ error_palette_obj:
 
 
 ; Main error handling function.
-; Keeps
-sinewave::
+; Keeps running until the game is turned off.
+; TODO: make sure this also works in GBC mode.
+;
+; Input:
+; - `hl`: Pointer to error message
+;
+; Destroys: all
+sinewave:
     
-    ;Reset stack pointer
+    ;Stop everything
     di
-    ld sp, w_stack
+
+    ;Save A, HL and SP temporarily
+    ld [w_error_tempregs], a
+    ld a, h
+    ld [w_error_tempregs+6], a
+    ld a, l
+    ld [w_error_tempregs+7], a
+    ld [w_error_tempregs+8], sp
+
+    ;Save AF
+    ld hl, w_error_tempregs + 2
+    ld sp, w_error_tempregs+3
+    push af
+    ld a, [hl-]
+    ld [hl+], a
+
+    ;Save BC and DE
+    ld a, b
+    ld [hl+], a
+    ld a, c
+    ld [hl+], a
+    ld a, d
+    ld [hl+], a
+    ld a, e
+    ld [hl+], a
+
+    ;Save rIE and rIF
+    ld a, l
+    add a, 4
+    ld l, a
+    jr nc, :+
+        inc h
+    :
+    ldh a, [rIE]
+    ld [hl+], a
+    ldh a, [rIF]
+    ld [hl+], a
+    ld sp, w_error_stack
     
     ;Is LCD already disabled?
     ld hl, rLCDC
-    bit LCDCB_ON, [hl]
+    bit 7, [hl]
 
-    ;If yes, skip disabling LCD
+    ;If yes, skip disabling the LCD
     jr z, :+
 
         ;Wait for Vblank
         ld hl, rLY
-        ld a, SCRN_Y
+        ld a, 144
         .wait
         cp a, [hl]
         jr nz, .wait
@@ -114,6 +166,12 @@ sinewave::
     xor a
     ldh [rSCY], a
 
+    ;Set window position
+    ld a, 96
+    ldh [rWY], a
+    ld a, 102
+    ldh [rWX], a
+
     ;Set palettes to black and white
     ld hl, error_palette_bg
     call palette_copy_bg
@@ -122,6 +180,8 @@ sinewave::
     call palette_copy_spr
 
     ;Clear VRAM
+    xor a
+    ldh [rVBK], a
     ld b, 0
     ld de, $2000
     ld hl, _VRAM
@@ -132,36 +192,83 @@ sinewave::
     ldh [rVBK], a
     ld b, 0
     ld de, $2000
-    ld hl, _VRAM
+    ld hl, $8000
     call memfill
     xor a
     ldh [rVBK], a
 
+    ;Copy register view to _SCRN1
+    ld hl, $9BFF
+    ld de, w_error_tempregs
+    ld bc, "af"
+    call numtoscreen
+    ld bc, "bc"
+    call numtoscreen
+    ld bc, "de"
+    call numtoscreen
+    ld bc, "hl"
+    call numtoscreen
+    ld bc, "sp"
+    call numtoscreen
+    ld bc, "in"
+    call numtoscreen
+
+    ;Check old HL value
+    ld a, [w_error_tempregs+6]
+    ld h, a
+    ld a, [w_error_tempregs+7]
+    ld l, a
+
+    ;Check values at this position
+    ld a, [hl+]
+    cp a, $FF
+    jr nz, .nomessage
+    ld a, [hl+]
+    jr nz, .nomessage
+
+        ;There is a crash message, copy it to tilemap
+        ld b, h
+        ld c, l
+        ld hl, $9AC0
+        call strcopy
+    .nomessage
+
     ;DMA setup
     call sprite_setup
-
-    ;Clear OAM
-    ld hl, w_oam_mirror
-    ld b, a
-    ld de, $0100
-    call memfill
-    call h_dma_routine
     
-    ;Load graphics into VRAM
-    ld hl, _VRAM
+    ;Load face graphics into VRAM
+    ld hl, $9000
     ld bc, error_tiles
-    ld de, error_tiles_e - error_tiles
+    ld de, $0800
+    call memcopy
+    ld hl, $8800
+    ld de, error_tiles.end - error_tiles - $0800
+    call memcopy
+    
+    ;Load numbers into VRAM
+    ld hl, $8900
+    ld bc, error_font + $100
+    ld de, 16*10
+    call memcopy
+    ld bc, error_font + 33*16
+    ld de, 16*6
     call memcopy
 
-    ld hl, _VRAM + $0BE0
+    ;Copy font into VRAM
+    ld bc, error_font
+    ld de, $0600
+    call memcopy
+
+    ;Copy sprites into VRAM
+    ld hl, $8000
     ld bc, error_sprites
-    ld de, error_sprites_e - error_sprites
+    ld de, error_sprites.end - error_sprites
     call memcopy
 
     ;Load map into VRAM
     ld bc, error_map
-    ld hl, _SCRN0
-    ld de, $0000
+    ld hl, $9800
+    ld de, 0
 
     .loop
     ;Copy the data
@@ -190,44 +297,46 @@ sinewave::
 
     ;Set DMG palettes
     ld a, %00110011
-    ldh [rBGP], a
-    ld a, %11000100
-    ldh [rOBP0], a
+    ld [rBGP], a
+    ld a, $C4
+    ld [rOBP0], a
 
     ;Set sprite data
     ;Saves me time, because I don't want to do it manually
     ld hl, w_oam_mirror
     ld bc, error_spritedata
-    ld de, $0100
+    ld de, $A0
     call memcopy
     
     ;Update OAM
     call h_dma_routine
 
     ;Prepare
-    ld hl, zero+SCRN_Y
+    ld hl, zero+144
 
     ;Enable interupts
     ld a, STATF_MODE00
-    ldh [rSTAT], a
+    ld [rSTAT], a
     ld a, IEF_STAT
-    ldh [rIE], a
+    ld [rIE], a
     xor a
-    ldh [rIF], a
+    ld [rIF], a
 
     ;re-enable LCD
-    ld a, LCDCF_ON | LCDCF_BG8000 | LCDCF_OBJ16 | LCDCF_OBJON | LCDCF_BGON
-    ldh [rLCDC], a
+    ld a, LCDCF_ON | LCDCF_BG8800 | LCDCF_OBJ16 | LCDCF_OBJON | LCDCF_BGON | LCDCF_WIN9C00
+    ld [rLCDC], a
+    ;Falls into `error_wait`
 
 
-;Manually wait for STAT interupt request
+
 error_wait:
     ldh a, [rIF]
-    xor a, IEF_STAT
+    xor a, 2
     ldh [rIF], a
     halt
+    ;Falls into `int_stat`
 
-;Interupt request happened
+;Stat
 int_stat:
 
     ;Write previously found value
@@ -247,17 +356,38 @@ int_stat:
     ;VBLANK CHECK
     ;Check scanline number
     ldh a, [rLY]
-    cp a, $8F
+    cp a, $86
     jp nz, error_wait
 
+    ;Change thingz
+    ld a, 40
+    ldh [rSCY], a
+
+    ;Save these for later
+    push bc
+    ldh a, [rSCX]
+    ld b, a
+    ldh a, [rLCDC]
+    ld c, a
+    and a, ~LCDCF_OBJON
+    ldh [rLCDC], a
+    xor a
+    ldh [rSCX], a
+
     ;This is the final scanline, just wait for VBlank
-    ld a, LCDCF_BGON
+    ld a, IEF_VBLANK
     ldh [rIE], a
     halt 
 
 
     
     ;VBLANK
+    ;Restore PPU registers
+    ld a, b
+    ldh [rSCX], a
+    ld a, c
+    ldh [rLCDC], a
+
     ;Cool and fun input test
     call input
 
@@ -270,35 +400,44 @@ int_stat:
     ;Go to the end of the animation if B is pressed
     bit PADB_B, c
     jr z, :+
-        ld hl, sine+SCRN_Y
+        ld hl, sine+144
+    :
+
+    bit PADB_SELECT, c
+    jr z, :+
+        ldh a, [rLCDC]
+        xor a, LCDCF_WINON
+        ldh [rLCDC], a
     :
 
     ;Save things on the stack
     push hl
 
     ;Decrease all 40 sprites Y-position
-    ld b, OAM_COUNT
+    ld b, 40
     ld hl, w_oam_mirror
     ld de, $0004
     .loop
-        dec [hl]
-        add hl, de
-        dec b
-        jr nz, .loop
-    ;
+    dec [hl]
+    add hl, de
+    dec b
+    jr nz, .loop
 
     ;Run sprite DMA
     call h_dma_routine
 
-    ;Retrieve and increment sine pointer from stack
+    ;Retrieve sine pointer from stack
     pop hl
+    pop bc
+
+    ;Increase sine pointer
     inc hl
     
     ;Decrease sine pointer if too high
     ld a, high(sine)+2
     cp a, h
     jr nz, :+
-        dec h
+    dec h
     :
 
     ;Load sine pointer back into DE
@@ -310,20 +449,176 @@ int_stat:
     sub a, 31
     ld b, a
 
-    ;Do this for now
+    ;Do this
     ldh [rSCY], a
 
     ;Reenable interupts
     xor a
     ldh [rIF], a
-    ld a, IEF_STAT
+    ld a, 2
     ldh [rIE], a
     jp error_wait
 ;
 
-; Various error codes.
-error_strings:
 
-; Vblank interupt was triggered
-error_vblank:: db "VBLANK INTERUPT VECTOR", $00
-error_entityoverflow:: db "ENTITY OVERFLOW", $00
+
+; Copies a numbers to the screen as hex.
+; 
+; Input:
+; - `bc`: Number prefix (immediate value)
+; - `hl`: Pointer to tilemap position - 32
+numtoscreen:
+
+    ;Move HL into position
+    ld a, l
+    or a, %00011111
+    ld l, a
+    inc hl
+
+    ;Copy text
+    ld a, b
+    add a, $80
+    ld [hl+], a
+    ld a, c
+    add a, $80
+    ld [hl+], a
+    ld a, ":"+$80
+    ld [hl+], a
+    ld a, "$"+$80
+    ld [hl+], a
+
+    ;High digit
+    ld a, [de]
+    and a, %11110000
+    swap a
+    add a, $90
+    ld [hl+], a
+    ld a, [de]
+    and a, %00001111
+    add a, $90
+    ld [hl+], a
+    inc de
+
+    ;Low digit
+    ld a, [de]
+    and a, %11110000
+    swap a
+    add a, $90
+    ld [hl+], a
+    ld a, [de]
+    and a, %00001111
+    add a, $90
+    ld [hl+], a
+    inc de
+
+    ;Return
+    ret 
+;
+
+
+
+; Error messages and their character map.
+error_messages:
+    PUSHC
+    NEWCHARMAP chm_errormsg
+    CHARMAP " ", $A0
+    CHARMAP "!", $A1
+    CHARMAP "\"", $A2
+    CHARMAP "#", $A3
+    CHARMAP "$", $A4
+    CHARMAP "%", $A5
+    CHARMAP "&", $A6
+    CHARMAP "'", $A7
+    CHARMAP "(", $A8
+    CHARMAP ")", $A9
+    CHARMAP "*", $AA
+    CHARMAP "+", $AB
+    CHARMAP ",", $AC
+    CHARMAP "-", $AD
+    CHARMAP ".", $AE
+    CHARMAP "/", $AF
+    CHARMAP "0", $B0
+    CHARMAP "1", $B1
+    CHARMAP "2", $B2
+    CHARMAP "3", $B3
+    CHARMAP "4", $B4
+    CHARMAP "5", $B5
+    CHARMAP "6", $B6
+    CHARMAP "7", $B7
+    CHARMAP "8", $B8
+    CHARMAP "9", $B9
+    CHARMAP ":", $BA
+    CHARMAP ";", $BB
+    CHARMAP "<", $BC
+    CHARMAP "=", $BD
+    CHARMAP ">", $BE
+    CHARMAP "?", $BF
+
+    CHARMAP "A", $C1
+    CHARMAP "B", $C2
+    CHARMAP "C", $C3
+    CHARMAP "D", $C4
+    CHARMAP "E", $C5
+    CHARMAP "F", $C6
+    CHARMAP "G", $C7
+    CHARMAP "H", $C8
+    CHARMAP "I", $C9
+    CHARMAP "J", $CA
+    CHARMAP "K", $CB
+    CHARMAP "L", $CC
+    CHARMAP "M", $CD
+    CHARMAP "N", $CE
+    CHARMAP "O", $CF
+    CHARMAP "P", $D0
+    CHARMAP "Q", $D1
+    CHARMAP "R", $D2
+    CHARMAP "S", $D3
+    CHARMAP "T", $D4
+    CHARMAP "U", $D5
+    CHARMAP "V", $D6
+    CHARMAP "W", $D7
+    CHARMAP "X", $D8
+    CHARMAP "Y", $D9
+    CHARMAP "Z", $DA
+    CHARMAP "[", $DB
+    CHARMAP "\\", $DC
+    CHARMAP "]", $DD
+    CHARMAP "^", $DE
+    CHARMAP "_", $DF
+
+    CHARMAP "a", $C1
+    CHARMAP "b", $C2
+    CHARMAP "c", $C3
+    CHARMAP "d", $C4
+    CHARMAP "e", $C5
+    CHARMAP "f", $C6
+    CHARMAP "g", $C7
+    CHARMAP "h", $C8
+    CHARMAP "i", $C9
+    CHARMAP "j", $CA
+    CHARMAP "k", $CB
+    CHARMAP "l", $CC
+    CHARMAP "m", $CD
+    CHARMAP "n", $CE
+    CHARMAP "o", $CF
+    CHARMAP "p", $D0
+    CHARMAP "q", $D1
+    CHARMAP "r", $D2
+    CHARMAP "s", $D3
+    CHARMAP "t", $D4
+    CHARMAP "u", $D5
+    CHARMAP "v", $D6
+    CHARMAP "w", $D7
+    CHARMAP "x", $D8
+    CHARMAP "y", $D9
+    CHARMAP "z", $DA
+    CHARMAP "\{", $DB
+    CHARMAP "|", $DC
+    CHARMAP "}", $DD
+    CHARMAP "~", $DE
+
+    ;Strings containing error messages
+    error_strings:
+    error_entityoverflow::  db $FF, $00, "ENTITY OVERFLOW", $00
+    POPC
+;

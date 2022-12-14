@@ -46,13 +46,17 @@ var_w0:
 
         ;Sprite stuff
         w_oam_mirror:: ds $A4, $00
-        
         ASSERT low(w_oam_mirror) == 0
 
         ;Collision coordinate buffer
         w_intro_color_buffer::
         w_collision_buffer:: dw $0000, $0000, $0000, $0000, $0000, $0000, $0000, $0000
         ;
+
+        ;Error handler temporary variable storage
+        w_error_tempregs:: ds 12, $00
+        w_error_stack_top: ds 8, $00
+        w_error_stack::
 
         ;Palette shenanigans
         w_palette_used:: db $00 ;Light palette
