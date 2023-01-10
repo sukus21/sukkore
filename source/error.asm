@@ -6,11 +6,17 @@ SECTION "ERROR SCREEN VECTOR", ROM0[$0038]
 ; Switches bank and jumps.
 ; Should be called using an `rst` instruction.
 ; Lives in ROM0.
-; TODO: make sure this also works in GBC mode.
 ;
 ; Input:
 ; - `hl`: Pointer to error message
 v_error::
+    jp error_start
+;
+
+SECTION "ERROR SCREEN LOADER", ROM0
+; Couldn't fit in vector table.
+error_start:
+    ld [w_error_tempregs+0], a
     ld a, bank(sinewave)
     ld [rROMB0], a
     jp sinewave
@@ -28,17 +34,17 @@ grad:
 ANGLE = 0.0
 MULTR = 0.0
     REPT 2048
-ANGLE = ANGLE + 256.0
-MULTR = MULTR + DIV(32.0, 2048.0)
-    db MUL(MULTR, SIN(ANGLE)) >> 16
+ANGLE = ANGLE + 512.0
+MULTR = MULTR + DIV(16.0, 2048.0)
+    db MUL(MULTR, SIN(ANGLE)) >> 17
     ENDR
 
 ;Regular sine curve
 sine:
 ANGLE = 0.0
     REPT 512
-    db MUL(32.0, SIN(ANGLE)) >> 16
-ANGLE = ANGLE + 256.0
+    db MUL(16.0, SIN(ANGLE)) >> 17
+ANGLE = ANGLE + 512.0
     ENDR
 
 
@@ -76,8 +82,8 @@ error_spritedata:
 error_palette_bg:
     color_dmg_blk
     color_dmg_wht
-    color_dmg_dkg
     color_dmg_blk
+    color_dmg_wht
 ;
 
 ;Sprite palette
@@ -104,19 +110,20 @@ sinewave:
     di
 
     ;Save A, HL and SP temporarily
-    ld [w_error_tempregs], a
+    ;A was previously saved
     ld a, h
-    ld [w_error_tempregs+6], a
+    ld [w_error_tempregs + 6], a
     ld a, l
-    ld [w_error_tempregs+7], a
-    ld [w_error_tempregs+8], sp
+    ld [w_error_tempregs + 7], a
+    pop hl
+    ld [w_error_tempregs + 9], sp
+    ld a, [w_error_tempregs + 10]
+    ld [w_error_tempregs + 8], a
 
     ;Save AF
-    ld hl, w_error_tempregs + 2
-    ld sp, w_error_tempregs+3
+    ld sp, w_error_tempregs + 3
+    ld hl, sp - 1
     push af
-    ld a, [hl-]
-    ld [hl+], a
 
     ;Save BC and DE
     ld a, b
@@ -167,12 +174,13 @@ sinewave:
     ldh [rSCY], a
 
     ;Set window position
-    ld a, 96
+    ld a, 84
     ldh [rWY], a
     ld a, 102
     ldh [rWX], a
 
     ;Set palettes to black and white
+    xor a
     ld hl, error_palette_bg
     call palette_copy_bg
     xor a
@@ -222,16 +230,19 @@ sinewave:
     ;Check values at this position
     ld a, [hl+]
     cp a, $FF
+    ld a, 0
     jr nz, .nomessage
     ld a, [hl+]
+    or a, a ;cp a, 0
     jr nz, .nomessage
-
         ;There is a crash message, copy it to tilemap
         ld b, h
         ld c, l
         ld hl, $9AC0
         call strcopy
+        ld a, $FF
     .nomessage
+    ldh [h_setup], a
 
     ;DMA setup
     call sprite_setup
@@ -298,7 +309,7 @@ sinewave:
     ;Set DMG palettes
     ld a, %00110011
     ld [rBGP], a
-    ld a, $C4
+    ld a, %11000100
     ld [rOBP0], a
 
     ;Set sprite data
@@ -323,8 +334,8 @@ sinewave:
     ld [rIF], a
 
     ;re-enable LCD
-    ld a, LCDCF_ON | LCDCF_BG8800 | LCDCF_OBJ16 | LCDCF_OBJON | LCDCF_BGON | LCDCF_WIN9C00
-    ld [rLCDC], a
+    ld a, LCDCF_ON | LCDCF_BLK21 | LCDCF_OBJ16 | LCDCF_OBJON | LCDCF_BGON | LCDCF_WIN9C00
+    ldh [rLCDC], a
     ;Falls into `error_wait`
 
 
@@ -356,10 +367,16 @@ int_stat:
     ;VBLANK CHECK
     ;Check scanline number
     ldh a, [rLY]
+    cp a, $8F
+    jr z, .vwait
     cp a, $86
     jp nz, error_wait
+    ldh a, [h_setup]
+    or a, a
+    jp z, error_wait
 
-    ;Change thingz
+    ;Show error message
+    .vwait
     ld a, 40
     ldh [rSCY], a
 
@@ -369,7 +386,7 @@ int_stat:
     ld b, a
     ldh a, [rLCDC]
     ld c, a
-    and a, ~LCDCF_OBJON
+    and a, ~(LCDCF_OBJON |LCDCF_WINON)
     ldh [rLCDC], a
     xor a
     ldh [rSCX], a
@@ -417,11 +434,27 @@ int_stat:
     ld b, 40
     ld hl, w_oam_mirror
     ld de, $0004
-    .loop
-    dec [hl]
-    add hl, de
-    dec b
-    jr nz, .loop
+    .loop40
+        dec [hl]
+        add hl, de
+        dec b
+        jr nz, .loop40
+    ;
+
+    ;Move right sprites away if window is open
+    ldh a, [rLCDC]
+    ld c, a
+    ld b, 9
+    ld hl, w_oam_mirror+16*4+1
+    .loop20w
+        bit LCDCB_WINON, a
+        set 6, [hl]
+        jr nz, :+
+            res 6, [hl]
+        :
+        add hl, de
+        dec b
+        jr nz, .loop20w
 
     ;Run sprite DMA
     call h_dma_routine
