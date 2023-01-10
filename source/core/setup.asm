@@ -9,22 +9,7 @@ setup::
 
     ;Is this GBC hardware?
     ld sp, w_stack
-
-    ;Write 1 to WRAM1
-    ld hl, _RAMBANK
-    ld a, 1
-    ldh [rSVBK], a
-    ld [hl], 1
-
-    ;Write 0 to WRAM2
-    inc a
-    ldh [rSVBK], a
-    ld [hl], 0
-
-    ;Try to read 1 back from WRAM1
-    dec a
-    ldh [rSVBK], a
-    ld a, [hl]
+    call detect_gbc
 
     ;What did we get?
     ldh [h_is_color], a

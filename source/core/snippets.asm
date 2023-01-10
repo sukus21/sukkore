@@ -536,3 +536,54 @@ wait_scanline::
     ;Return
     ret 
 ;
+
+
+
+; Detect if current hardware is GBC compatible or not.
+; Lives in ROM0.
+; 
+; Returns:
+; - `a`: result (0 = not CGB compatible)
+; - `fZ`: result (0 = CGB compatible)
+; - `fC`: result (1 = CGB compatible)
+;
+; Saves: none
+detect_gbc::
+    ld hl, $D000
+    ld c, low(rSVBK)
+
+    ;Save bank page
+    ldh a, [c]
+    ld b, a
+
+    ;Overwrite byte 1
+    ld a, 1
+    ldh [c], a
+    ld d, [hl]
+    ld [hl], a
+
+    ;Overwrite byte 2
+    inc a
+    ldh [c], a
+    ld e, [hl]
+    ld [hl], a
+
+    ;Compare
+    dec a
+    ldh [c], a
+    ld a, [hl]
+    sub a, 2
+
+    ;Restore without altering flags
+    ld [hl], d
+    ld d, a
+    ld a, 1
+    ldh [c], a
+    ld [hl], e
+    ld a, b
+    ld [c], a
+
+    ;Return
+    ld a, d
+    ret
+;
