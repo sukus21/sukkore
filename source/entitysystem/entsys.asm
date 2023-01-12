@@ -45,9 +45,18 @@ entsys_step::
 	;
 ;
 
-; Address of new entity is stored in BC.
+
+
+; Allocates a new entity.
+; Entity size is 1 chunk, or 16 bytes.
+; Lives in ROM0.
+;
+; Returns:
+; - `bc`: Entity pointer
+;
 ; Destroys: all
 entsys_new16::
+    
     ;Load next free slot to HL
     ld hl, w_entsys_first16
     ld a, [hl+]
@@ -65,47 +74,56 @@ entsys_new16::
     ;Load next free slot into DE
     set 1, l
     ld a, [hl+]
-    ld e, a
     ld d, [hl]
 
     ;Save next free slot for next allocation
     ld hl, w_entsys_first16
-    ld [hl+], e
+    ld [hl+], a
     ld [hl], d
 
+    ;Return
     ret
 
     .out_of_16
-        call entsys_new32
-        
-        ;Save buddy for next allocation
-        ld hl, w_entsys_first16
-        ld a, c
-        ld [hl+], a
-        ld [hl], b
+    call entsys_new32
+    
+    ;Save buddy for next allocation
+    ld hl, w_entsys_first16
+    ld a, c
+    set 4, a
+    ld [hl+], a
+    ld [hl], b
 
-        ;Make buddy a single-chunk slot
-        ld h, b
-        ld l, c
-        inc l
-        ld [hl] $10
-        set 1, l
-        ld [hl] $00
+    ;Make buddy a single-chunk slot
+    ld h, b
+    ld l, c
+    inc l
+    ld a, $10
+    ld [hl], a ;Write entity size
 
-        ;Get new slot
-        add a, $11
-        ld c, a
+    ;Get buddy slot
+    set 4, l
 
-        ;Make new slot a single-chunk slot
-        ld l, c
-        ld [hl] $10
+    ;Make new slot a single-chunk slot
+    ld [hl-], a ;Write buddy size
+    ld [hl], $00 ;Reset buddy bank
 
-        dec c
-        ret
-        
-; Address of new entity is stored in BC.
+    ;Return
+    ret
+;
+
+
+
+; Allocates a new entity.
+; Entity size is 2 chunks, or 32 bytes.
+; Lives in ROM0.
+;
+; Returns:
+; - `bc`: Entity pointer
+;
 ; Destroys: all
 entsys_new32::
+    
     ;Load next free slot to HL
     ld hl, w_entsys_first32
     ld a, [hl+]
@@ -123,41 +141,100 @@ entsys_new32::
     ;Load next free slot into DE
     set 1, l
     ld a, [hl+]
-    ld e, a
     ld d, [hl]
 
     ;Save next free slot for next allocation
     ld hl, w_entsys_first32
-    ld [hl+], e
+    ld [hl+], a
     ld [hl], d
 
+    ;Return
     ret
 
     .out_of_32
-        call entsys_new64
-        
-        ;Save buddy for next allocation
-        ld hl, w_entsys_first32
-        ld a, c
-        ld [hl+], a
-        ld [hl], b
+    call entsys_new64
+    
+    ;Save buddy for next allocation
+    ld hl, w_entsys_first32
+    ld a, c
+    set 5, a
+    ld [hl+], a
+    ld [hl], b
 
-        ;Make buddy a single-chunk slot
-        ld h, b
-        ld l, c
-        inc l
-        ld [hl] $20
-        set 1, l
-        ld [hl] $00
+    ;Make buddy a double-chunk slot
+    ld h, b
+    ld l, c
+    inc l
+    ld a, $20
+    ld [hl], a ;Write entity size
 
-        ;Get new slot
-        add a, $21
-        ld c, a
+    ;Get buddy slot
+    set 5, l
 
-        ;Make new slot a single-chunk slot
-        ld l, c
-        ld [hl] $20
+    ;Make new slot a single-chunk slot
+    ld [hl-], a ;Write buddy size
+    ld [hl], $00 ;Reset buddy bank
 
-        dec c
-        ret
+    ;Return
+    ret
+;
 
+
+
+; Allocates a new entity.
+; Entity size is 4 chunks, or 64 bytes.
+; Lives in ROM0.
+;
+; Returns:
+; - `bc`: Entity pointer
+;
+; Destroys: all
+entsys_new64::
+
+    ;Load next free slot to HL and BC
+    ld hl, w_entsys_first64
+    ld a, [hl+]
+    ld h, [hl]
+    ld l, a
+    ld b, h
+    ld c, l
+    inc l
+
+    ;Find next free slot
+    .loop
+        ld a, l
+        add a, 63
+        ld l, a
+        jr nc, :+
+            inc h
+        :
+
+        ;OOB check
+        bit 5, h
+        jr z, :+
+            ld hl, error_entityoverflow
+            rst v_error
+        :
+
+        ;Make sure bank is empty
+        ld a, [hl+]
+        or a, a
+        jr nz, .loop
+
+        ;Check size of element
+        ld a, $40
+        cp a, [hl]
+        jr nz, .loop
+        dec l
+    ;
+
+    ;Save next free slot for next allocation
+    ld d, h
+    ld a, l
+    ld hl, w_entsys_first64
+    ld [hl+], a
+    ld [hl], d
+
+    ;Return
+    ret
+;
