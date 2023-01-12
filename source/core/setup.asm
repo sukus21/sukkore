@@ -17,12 +17,10 @@ setup::
     jr z, .is_DMG
         
         ;CGB machine
-        ld b, b
         jr .is_CGB
 
     .is_DMG
         ;DMG machine
-        ld b, b
         ;fallthrough
 
     .is_CGB
@@ -43,7 +41,7 @@ setup::
     ldh [h_setup], a
     
     ;Do my intro with the logo
-    call intro
+    ;call intro
 
 
 ; Skip GBC detection and RNG reset.

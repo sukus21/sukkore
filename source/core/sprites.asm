@@ -57,7 +57,7 @@ sprite_setup::
 ; Input:
 ; - `b`: Sprite count * 4
 ;
-; Output:
+; Returns:
 ; - `a`: lower sprite address byte
 sprite_get::
 

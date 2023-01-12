@@ -10,7 +10,7 @@ SECTION "SNIPPETS", ROM0
 ; - `bc`: Source
 ; - `de`: Byte count
 ;
-; Output:
+; Returns:
 ; - `hl`: Destination + Byte count
 ; - `bc`: Source + Byte count
 ; - `de`: `$0000`
@@ -43,7 +43,7 @@ memcopy::
 ; - `b`: Fill byte
 ; - `de`: Byte count
 ;
-; Output:
+; Returns:
 ; - `hl`: Destination + Byte count
 ; - `de`: `$0000`
 ;
@@ -97,7 +97,7 @@ strcopy::
 ; - `hl`: String 1
 ; - `de`: String 2
 ;
-; Output:
+; Returns:
 ; `fz`: Strings are equal (z=1, strings are equal)
 strcomp::
 
@@ -126,7 +126,7 @@ strcomp::
 ; - `hl`: Palette address
 ; - `a`: Palette index * 8
 ;
-; Output:
+; Returns:
 ; - `hl`: `$0010`
 ; - `a`: `$08`
 ;
@@ -163,7 +163,7 @@ palette_copy_bg::
 ; - `hl`: Palette address
 ; - `a`: Palette index * 8
 ;
-; Output:
+; Returns:
 ; - `hl`: Palette address + `$10`
 ; - `a`: Palette index + `$08`
 ;

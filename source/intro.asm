@@ -190,7 +190,7 @@ intro::
 ; Input:
 ; - `c`: Opacity
 ;
-; Output:
+; Returns:
 ; - `e`: Input opacity
 intro_faderoutine:
     

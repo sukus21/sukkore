@@ -5,7 +5,7 @@ SECTION "INPUT", ROM0
 ; Bits 0-3 = buttons, bits 4-7 = dpad.
 ; Lives in ROM0.
 ;
-; Output:
+; Returns:
 ; - `b`: Byte of buttons held
 ; - `c`: Byte of buttons pressed
 ;

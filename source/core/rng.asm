@@ -4,7 +4,7 @@ SECTION "RNG", ROM0
 ; More or less copied from SMW lol.
 ; Lives in ROM0.
 ; 
-; Output:
+; Returns:
 ; - `a`: Random value
 ;
 ; Destroys: `f`
@@ -30,7 +30,7 @@ rng_run_single::
 ; More or less copied from SMW lol.
 ; Lives in ROM0.
 ; 
-; Output:
+; Returns:
 ; - `de`: Random values
 ; - `a`: Mirror of `d`
 ;
@@ -67,7 +67,7 @@ rng_run::
 ; Lives in ROM0.
 ; REQUIRES HL TO BE SET TO h_rng_seed!!!
 ;
-; Output:
+; Returns:
 ; - `a`: Random value
 ;
 ; Destroys: `f`
