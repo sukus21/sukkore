@@ -9,6 +9,7 @@ SECTION "INPUT", ROM0
 ; - `b`: Byte of buttons held
 ; - `c`: Byte of buttons pressed
 ;
+; Saves: `e`, `hl`
 ; Destroys: `af`, `bc`, `d`
 input::
     
@@ -17,8 +18,8 @@ input::
     ld d, a
 
     ;Set up for reading the buttons
-    ld c, 0
-    ld a, %00100000
+    ld c, low(rP1)
+    ld a, P1F_GET_BTN
     ldh [c], a
     ldh [c], a
     nop 
@@ -37,7 +38,7 @@ input::
     ld b, a
 
     ;Set up for reading the DPAD
-    ld a, %00010000
+    ld a, P1F_GET_DPAD
     ldh [c], a
     ldh [c], a
     nop 

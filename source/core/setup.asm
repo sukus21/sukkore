@@ -41,7 +41,7 @@ setup::
     ldh [h_setup], a
     
     ;Do my intro with the logo
-    ;call intro
+    call intro
 
 
 ; Skip GBC detection and RNG reset.

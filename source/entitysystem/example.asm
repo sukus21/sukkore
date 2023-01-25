@@ -9,7 +9,7 @@ SECTION "TEST ENTITY", ROMX
 ;
 ; Destroys: 
 testent_step::
-    ld hl, w_entsys_testvar
+    ld hl, w_buffer
     inc [hl]
     ret 
 ;

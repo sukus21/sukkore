@@ -1,7 +1,33 @@
 INCLUDE "hardware.inc"
 INCLUDE "color.inc"
 
-SECTION "INTRO", ROM0
+SECTION "INTRO", ROM0, ALIGN[8]
+
+; Raw palette data.
+; Lives in ROM0.
+intro_palettes:
+    INCBIN "intro/sukus_fade.pal"
+    .end
+;
+
+; Tilemap data for logo. 
+; Contains a DMG- and CGB version.
+; Lives in ROM0.
+intro_tilemap:
+    INCBIN "intro/sukus_cgb.tlm"
+    .dmg
+    INCBIN "intro/sukus_dmg.tlm"
+    .end
+;
+
+; Tileset for logo and font.
+; Lives in ROM0.
+intro_tileset:
+    INCBIN "intro/intro.tls"
+    .end
+;
+
+
 
 ;Color pointer offsets
 _intro_yellow equ $00
@@ -9,10 +35,15 @@ _intro_red equ $40
 _intro_gray equ $80
 _intro_black equ $C0
 
+
+
 ; Plays the "Sukus Production screen".
 ; Routine will keep running until the animation is over, then return.
 ; Modifies screen data.
+; Assumes LCD is turned on.
 ; Lives in ROM0.
+;
+; Destroys: all
 intro::
 
     ;Wait for VBLANK
@@ -44,7 +75,7 @@ intro::
     cp a, 0
     jr nz, :+
         ld a, %11100100
-        ld [w_intro_color_buffer], a
+        ld [w_buffer], a
         ld bc, intro_tilemap.dmg
     :
         ld de, 20
@@ -169,14 +200,14 @@ intro::
     cp a, $00
     jr nz, .fadeout
 
-    ;Wait for Vblank but again this time
+    ;Wait for Vblank again
     xor a
     ldh [rIF], a
     ld a, IEF_VBLANK
     ld [rIE], a
     halt
 
-    ;NOW WE'RE TALKING!
+    ;Resume whatever was happening
     ret 
 ;
 
@@ -209,7 +240,7 @@ intro_faderoutine:
         ;Set values
         ldh a, [rBGP]
         ld b, a
-        ld hl, w_intro_color_buffer
+        ld hl, w_buffer
         ld a, [w_intro_state]
         cp a, 1
         jr z, :+
@@ -234,7 +265,7 @@ intro_faderoutine:
     ;CGB mode
     .color_real
         ld a, c
-        ld de, w_intro_color_buffer
+        ld de, w_buffer
         ld hl, intro_palettes + _intro_yellow
 
         ;Helper macro
@@ -271,7 +302,7 @@ intro_faderoutine:
         ld e, c
         
         ;Copy palettes
-        ld hl, w_intro_color_buffer
+        ld hl, w_buffer
         xor a
         call palette_copy_bg
         call palette_copy_bg
@@ -279,33 +310,4 @@ intro_faderoutine:
         ;Return
         ret 
     ;
-;
-
-
-
-;Data for fading colors
-align 8
-
-; Raw palette data.
-; Lives in ROM0.
-intro_palettes:
-    INCBIN "intro/sukus_fade.pal"
-    .end
-;
-
-; Tilemap data for logo. 
-; Contains a DMG- and CGB version.
-; Lives in ROM0.
-intro_tilemap:
-    INCBIN "intro/sukus_cgb.tlm"
-    .dmg
-    INCBIN "intro/sukus_dmg.tlm"
-    .end
-;
-
-; Tileset for logo and font.
-; Lives in ROM0.
-intro_tileset:
-    INCBIN "intro/intro.tls"
-    .end
 ;

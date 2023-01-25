@@ -16,7 +16,7 @@ v_error::
 SECTION "ERROR SCREEN LOADER", ROM0
 ; Couldn't fit in vector table.
 error_start:
-    ld [w_error_tempregs+0], a
+    ld [w_buffer+0], a
     ld a, bank(sinewave)
     ld [rROMB0], a
     jp sinewave
@@ -112,16 +112,16 @@ sinewave:
     ;Save A, HL and SP temporarily
     ;A was previously saved
     ld a, h
-    ld [w_error_tempregs + 6], a
+    ld [w_buffer + 6], a
     ld a, l
-    ld [w_error_tempregs + 7], a
+    ld [w_buffer + 7], a
     pop hl
-    ld [w_error_tempregs + 9], sp
-    ld a, [w_error_tempregs + 10]
-    ld [w_error_tempregs + 8], a
+    ld [w_buffer + 9], sp
+    ld a, [w_buffer + 10]
+    ld [w_buffer + 8], a
 
     ;Save AF
-    ld sp, w_error_tempregs + 3
+    ld sp, w_buffer + 3
     ld hl, sp - 1
     push af
 
@@ -146,7 +146,7 @@ sinewave:
     ld [hl+], a
     ldh a, [rIF]
     ld [hl+], a
-    ld sp, w_error_stack
+    ld sp, w_stack
     
     ;Is LCD already disabled?
     ld hl, rLCDC
@@ -207,7 +207,7 @@ sinewave:
 
     ;Copy register view to _SCRN1
     ld hl, $9BFF
-    ld de, w_error_tempregs
+    ld de, w_buffer
     ld bc, "af"
     call numtoscreen
     ld bc, "bc"
@@ -222,9 +222,9 @@ sinewave:
     call numtoscreen
 
     ;Check old HL value
-    ld a, [w_error_tempregs+6]
+    ld a, [w_buffer+6]
     ld h, a
-    ld a, [w_error_tempregs+7]
+    ld a, [w_buffer+7]
     ld l, a
 
     ;Check values at this position

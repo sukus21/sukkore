@@ -73,6 +73,8 @@ memfill::
 ; Input:
 ; - `hl`: Destination
 ; - `bc`: Source
+;
+; Saves: `de`
 strcopy::
     
     ;Read character from stream
@@ -99,6 +101,8 @@ strcopy::
 ;
 ; Returns:
 ; `fz`: Strings are equal (z=1, strings are equal)
+;
+; Saves: `bc`
 strcomp::
 
     ;Compare values, return if they don't match
@@ -131,6 +135,7 @@ strcomp::
 ; - `a`: `$08`
 ;
 ; Destroys: `bc`
+; Saves: `de`
 palette_copy_bg::
 
     ;Write palette index
@@ -168,6 +173,7 @@ palette_copy_bg::
 ; - `a`: Palette index + `$08`
 ;
 ; Destroys: `bc`
+; Saves: `de`
 palette_copy_spr::
 
     ;Write palette index
@@ -198,10 +204,12 @@ palette_copy_spr::
 ; 
 ; Input:
 ; - `hl`: Palette address
+;
+; Saves: `de`
 palette_copy_all::
 
     ;Set up background palette transfer
-    ld a, $80
+    ld a, BCPSF_AUTOINC
     ldh [rBCPS], a
     ld c, low(rBCPD)
     ld b, 8
@@ -220,7 +228,7 @@ palette_copy_all::
     ;
 
     ;Set up sprite palette transfer
-    ld a, $80
+    ld a, OCPSF_AUTOINC
     ldh [rOCPS], a
     ld c, low(rOCPD)
     ld b, 8
@@ -251,9 +259,8 @@ palette_copy_all::
 ; Input:
 ; - `hl`: Where to store the new palettes
 ; 
-; Destroys: all (probably)
+; Destroys: all
 palette_make_lighter::
-
     ld d, h
     ld e, l
     push hl
@@ -265,7 +272,6 @@ palette_make_lighter::
     ld b, $40
 
     .copybg
-        
         ldh a, [c]
         ld [de], a
         inc de
@@ -281,7 +287,6 @@ palette_make_lighter::
     ld b, $40
 
     .copyobj
-        
         ldh a, [c]
         ld [de], a
         inc de
@@ -393,6 +398,7 @@ bank_call_0::
 ; - `hl`: Address to jump to
 ;
 ; Destroys: `a`, unknown
+; Saves: `rROMB0`
 bank_call_x::
 
     ;Set up things for returning
@@ -420,7 +426,6 @@ bank_call_x::
 
 ; Switches bank and calls a given address.
 ; Switches banks back after returning.
-; Also saves and restores WRAMX bank on GBC.
 ; Lives in ROM0.
 ;
 ; Input:
@@ -428,6 +433,7 @@ bank_call_x::
 ; - `hl`: Address to jump to
 ;
 ; Destroys: `a`, unknown
+; Saves: `rROMB0`
 bank_call_xd::
 
     ;Store current bank number
@@ -466,6 +472,36 @@ _hl_::
 
 
 
+; Jumps to the address of BC.
+; Avoid using this if possible, only exists for completeness.
+; Lives in ROM0.
+;
+; Input:
+; - `bc`: Address to jump to
+;
+; Destroys: unknown
+_bc_:
+    push bc
+    ret 
+;
+
+
+
+; Jumps to the address of DE.
+; Avoid using this if possible, only exists for completeness.
+; Lives in ROM0.
+;
+; Input:
+; - `de`: Address to jump to
+;
+; Destroys: unknown
+_de_:
+    push de
+    ret 
+;
+
+
+
 ; Set CPU speed.
 ; Lives in ROM0.
 ;
@@ -473,6 +509,7 @@ _hl_::
 ; - `b.7`: Desired speed
 ;
 ; Destroys: `a`, `hl`
+; Saves: `e`
 cpu_speedtogle::
     
     ;Ignore ENTIRELY if not on a color machine
@@ -483,7 +520,7 @@ cpu_speedtogle::
     ;Ignore function call if CPU speed is already as desired
     ld hl, rKEY1
     ld a, [hl]
-    and a, %10000000
+    and a, KEY1F_DBLSPEED
     cp a, b
     ret z
 
@@ -494,7 +531,7 @@ cpu_speedtogle::
     ldh [rIE], a
     ld a, b
     ldh [rKEY1], a
-    ld a, $30
+    ld a, P1F_GET_NONE
     ldh [rP1], a
     stop 
     ld a, d
@@ -515,6 +552,7 @@ cpu_speedtogle::
 ; - `c`: Desired scanline
 ;
 ; Destroys: `af`, `hl`, `b`
+; Saves: `de`
 wait_scanline::
     
     ;Wait for scanline
@@ -526,8 +564,8 @@ wait_scanline::
     jr nz, :-
 
     ;Scanline has been hit, wait for mode 0
-    ld l, low(rSTAT)
-    ld b, %00000011
+    ld l, low(rSTAT) ;h was set to $FF previously
+    ld b, STATF_LCD
     :
     ld a, [hl]
     and a, b
@@ -549,7 +587,7 @@ wait_scanline::
 ;
 ; Saves: none
 detect_gbc::
-    ld hl, $D000
+    ld hl, _RAMBANK
     ld c, low(rSVBK)
 
     ;Save bank page

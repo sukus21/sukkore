@@ -44,53 +44,21 @@ var_w0:
     LOAD "WRAM0 VARIABLES", WRAM0, ALIGN[8]
         w_variables:
 
+        ;256 bytes of memory that can be used for anything.
+        w_buffer:: ds 256
+
         ;Sprite stuff
         w_oam_mirror:: ds $A4, $00
         ASSERT low(w_oam_mirror) == 0
 
-        ;Collision coordinate buffer
-        w_intro_color_buffer::
-        w_collision_buffer:: dw $0000, $0000, $0000, $0000, $0000, $0000, $0000, $0000
-        ;
-
-        ;Error handler temporary variable storage
-        w_error_tempregs:: ds 12, $00
-        w_error_stack_top: ds 8, $00
-        w_error_stack::
-
-        ;Palette shenanigans
-        w_palette_used:: db $00 ;Light palette
-        w_palette_buffer:: 
-            dw $0000, $0000, $0000, $0000
-            dw $0000, $0000, $0000, $0000
-            dw $0000, $0000, $0000, $0000
-            dw $0000, $0000, $0000, $0000
-            dw $0000, $0000, $0000, $0000
-            dw $0000, $0000, $0000, $0000
-            dw $0000, $0000, $0000, $0000
-            dw $0000, $0000, $0000, $0000
-
-            dw $0000, $0000, $0000, $0000
-            dw $0000, $0000, $0000, $0000
-            dw $0000, $0000, $0000, $0000
-            dw $0000, $0000, $0000, $0000
-            dw $0000, $0000, $0000, $0000
-            dw $0000, $0000, $0000, $0000
-            dw $0000, $0000, $0000, $0000
-            dw $0000, $0000, $0000, $0000
-        ;
-
         ;That intro thing
         w_intro_state:: db $00
         w_intro_timer:: db $00
-        ;
 
         ;Entity system variables
         w_entsys_first16:: dw $0000
         w_entsys_first32:: dw $0000
         w_entsys_first64:: dw w_entsys
-
-        w_entsys_testvar:: db $00
     ENDL
     var_w0_end:
 ;
