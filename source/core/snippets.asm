@@ -13,9 +13,8 @@ SECTION "SNIPPETS", ROM0
 ; Returns:
 ; - `hl`: Destination + Byte count
 ; - `bc`: Source + Byte count
-; - `de`: `$0000`
 ;
-; Destroys: `af`
+; Destroys: `af`, `de`
 memcopy::
 
     ;Copy the data
@@ -27,6 +26,36 @@ memcopy::
     ;Check byte count
     ld a, d
     or e
+    jr nz, memcopy
+
+    ;Return
+    ret 
+;
+
+
+
+; Copies data from one location to another using the CPU.
+; Lives in ROM0.
+;
+; Input:
+; - `hl`: Destination
+; - `bc`: Source
+; - `d`: Byte count
+;
+; Returns:
+; - `hl`: Destination + Byte count
+; - `bc`: Source + Byte count
+;
+; Saves: `e`
+memcopy_short::
+
+    ;Copy the data
+    ld a, [bc]
+    ld [hl+], a
+    inc bc
+
+    ;Check byte count
+    dec d
     jr nz, memcopy
 
     ;Return
