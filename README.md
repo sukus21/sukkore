@@ -1,5 +1,6 @@
-# sukCore
- More or less a project template, used in some form in all of my games.
+# sukkore
+A game-project template, used in all of my games in some form.
+Only main should be considered stable-ish.
 
 ### Tools used
  - RGBDS toolchain v0.5.2
