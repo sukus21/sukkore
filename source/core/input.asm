@@ -16,9 +16,9 @@ input::
     ;Previous buttons pressed
     ldh a, [h_input]
     ld d, a
+    ld c, low(rP1)
 
     ;Set up for reading the buttons
-    ld c, low(rP1)
     ld a, P1F_GET_BTN
     ldh [c], a
     ldh [c], a
@@ -33,8 +33,7 @@ input::
     ldh a, [c]
     ldh a, [c]
     ldh a, [c]
-    swap a
-    and a, %11110000
+    and a, %00001111
     ld b, a
 
     ;Set up for reading the DPAD
@@ -53,6 +52,7 @@ input::
     ldh a, [c]
     ldh a, [c]
     and a, %00001111
+    swap a
     or a, b
     cpl
     ld b, a

@@ -109,7 +109,7 @@ var_h:
         h_setup:: db $FF
         h_is_color:: db $FF
         h_bank_number:: db $01
-        h_sprite_slot:: db $01
+        h_sprite_slot:: db $00
         ;
 
         ;Shadow scrolling registers

@@ -56,7 +56,7 @@ memcopy_short::
 
     ;Check byte count
     dec d
-    jr nz, memcopy
+    jr nz, memcopy_short
 
     ;Return
     ret 
