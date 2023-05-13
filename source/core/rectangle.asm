@@ -113,6 +113,7 @@ rectangle_movement::
 ;
 
 
+
 ; Function to draw a rectangle using sprites.
 ; TODO: proper 8/16 support
 ; Lives in ROM0.
@@ -334,4 +335,3 @@ rectangle_draw::
     ;Return
     ret
 ;
-
