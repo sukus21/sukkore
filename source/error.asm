@@ -164,7 +164,7 @@ sinewave:
 
         ;Disable LCD
         xor a
-        ld [rLCDC], a
+        ldh [rLCDC], a
     :
 
     ;Reset background scrolling
@@ -308,9 +308,9 @@ sinewave:
 
     ;Set DMG palettes
     ld a, %00110011
-    ld [rBGP], a
+    ldh [rBGP], a
     ld a, %11000100
-    ld [rOBP0], a
+    ldh [rOBP0], a
 
     ;Set sprite data
     ;Saves me time, because I don't want to do it manually
@@ -327,11 +327,11 @@ sinewave:
 
     ;Enable interupts
     ld a, STATF_MODE00
-    ld [rSTAT], a
+    ldh [rSTAT], a
     ld a, IEF_STAT
-    ld [rIE], a
+    ldh [rIE], a
     xor a
-    ld [rIF], a
+    ldh [rIF], a
 
     ;re-enable LCD
     ld a, LCDCF_ON | LCDCF_BLK21 | LCDCF_OBJ16 | LCDCF_OBJON | LCDCF_BGON | LCDCF_WIN9C00

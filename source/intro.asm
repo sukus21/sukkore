@@ -56,7 +56,7 @@ intro::
     ;There is Vblank!
     ;Disable LCD
     xor a
-    ld [rLCDC], a
+    ldh [rLCDC], a
 
     ;Copy font to VRAM
     ld hl, _VRAM + $1000
@@ -165,7 +165,7 @@ intro::
     xor a
     ldh [rIF], a
     ld a, IEF_VBLANK
-    ld [rIE], a
+    ldh [rIE], a
     halt 
 
     ;Now in Vblank, count down
@@ -185,7 +185,7 @@ intro::
     xor a
     ldh [rIF], a
     ld a, IEF_VBLANK
-    ld [rIE], a
+    ldh [rIE], a
     halt 
 
     ;Fade out
@@ -204,7 +204,7 @@ intro::
     xor a
     ldh [rIF], a
     ld a, IEF_VBLANK
-    ld [rIE], a
+    ldh [rIE], a
     halt
 
     ;Resume whatever was happening
@@ -269,7 +269,7 @@ intro_faderoutine:
         ld hl, intro_palettes + _intro_yellow
 
         ;Helper macro
-        _fade_color: MACRO
+        MACRO _fade_color
             add a, \1
             ld l, a
             ld a, [hl+]
