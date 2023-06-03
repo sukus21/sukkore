@@ -14,7 +14,7 @@ SECTION "VARIABLE INITIALIZATION", ROMX
 
 ; Initializes ALL variables.
 variables_init::
-    
+
     ;Copy WRAM0 variables
     ld hl, w_variables ;Start of variable space
     ld bc, var_w0 ;Initial variable data
@@ -85,7 +85,7 @@ var_h:
 
         ;OAM DMA routine in HRAM
         h_dma_routine::
-            
+
             ;Initialize OAM DMA
             ld a, HIGH(w_oam_mirror)
             ldh [rDMA], a

@@ -105,7 +105,7 @@ memfill::
 ;
 ; Saves: `de`
 strcopy::
-    
+
     ;Read character from stream
     ld a, [bc]
     inc bc
@@ -293,7 +293,7 @@ palette_make_lighter::
     ld d, h
     ld e, l
     push hl
-    
+
     ;First, copy all palettes to the destination
     ld hl, rBCPS
     ld [hl], 0
@@ -324,13 +324,13 @@ palette_make_lighter::
         jr nz, .copyobj
     ;
 
-    
-    
+
+
     ;Initialize modifying
     pop hl
     ld b, $40
     push bc
-    
+
     .modify
         ld a, [hl+]
         ld e, a
@@ -481,7 +481,7 @@ bank_call_xd::
     pop af
     ldh [h_bank_number], a
     ld [rROMB0], a
-    
+
     ;Return
     ret 
 ;
@@ -540,12 +540,12 @@ _de_:
 ; Destroys: `a`, `hl`
 ; Saves: `e`
 cpu_speedtogle::
-    
+
     ;Ignore ENTIRELY if not on a color machine
     ldh a, [h_is_color]
     cp a, 0
     ret z
-    
+
     ;Ignore function call if CPU speed is already as desired
     ld hl, rKEY1
     ld a, [hl]
@@ -565,7 +565,7 @@ cpu_speedtogle::
     stop 
     ld a, d
     ldh [rIE], a
-    
+
     ;Return
     ret
 ;
@@ -583,7 +583,7 @@ cpu_speedtogle::
 ; Destroys: `af`, `hl`, `b`
 ; Saves: `de`
 wait_scanline::
-    
+
     ;Wait for scanline
     dec c
     ld hl, rLY

@@ -147,7 +147,7 @@ sinewave:
     ldh a, [rIF]
     ld [hl+], a
     ld sp, w_stack
-    
+
     ;Is LCD already disabled?
     ld hl, rLCDC
     bit 7, [hl]
@@ -246,7 +246,7 @@ sinewave:
 
     ;DMA setup
     call sprite_setup
-    
+
     ;Load face graphics into VRAM
     ld hl, $9000
     ld bc, error_tiles
@@ -255,7 +255,7 @@ sinewave:
     ld hl, $8800
     ld de, error_tiles.end - error_tiles - $0800
     call memcopy
-    
+
     ;Load numbers into VRAM
     ld hl, $8900
     ld bc, error_font + $100
@@ -318,7 +318,7 @@ sinewave:
     ld bc, error_spritedata
     ld de, $A0
     call memcopy
-    
+
     ;Update OAM
     call h_dma_routine
 
@@ -397,7 +397,7 @@ int_stat:
     halt 
 
 
-    
+
     ;VBLANK
     ;Restore PPU registers
     ld a, b
@@ -465,7 +465,7 @@ int_stat:
 
     ;Increase sine pointer
     inc hl
-    
+
     ;Decrease sine pointer if too high
     ld a, high(sine)+2
     cp a, h

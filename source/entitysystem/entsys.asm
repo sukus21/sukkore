@@ -9,16 +9,16 @@ SECTION "ENTSYS", ROM0
 ; Destroys: all
 entsys_step::
     ld hl, w_entsys
-	.loop
-		
-		;Is this entity in use or not?
+    .loop
+
+        ;Is this entity in use or not?
         ld d, h
         ld e, l
-		ld a, [hl+] ;Entity ROM bank
-		or a, a
+        ld a, [hl+] ;Entity ROM bank
+        or a, a
 
-		;Entity is not allocated, go to next entity in line
-		jr z, .proceed
+        ;Entity is not allocated, go to next entity in line
+        jr z, .proceed
 
             ;Entity is in use, apply bank and read pointer
             push hl
@@ -31,18 +31,18 @@ entsys_step::
             pop hl
         ;
 
-		;Go to next entity
+        ;Go to next entity
         .proceed
         ld a, [hl-] ;Distance to next entity -> entity bank ID
         add a, l
         ld l, a
-		jr nc, .loop
-		inc h
+        jr nc, .loop
+        inc h
         ld a, h
         cp a, $E0 ;ERAM
-		jr nz, .loop
+        jr nz, .loop
         ret
-	;
+    ;
 ;
 
 
@@ -86,7 +86,7 @@ entsys_new16::
 
     .out_of_16
     call entsys_new32
-    
+
     ;Save buddy for next allocation
     ld hl, w_entsys_first16
     ld a, c
@@ -123,7 +123,7 @@ entsys_new16::
 ;
 ; Destroys: all
 entsys_new32::
-    
+
     ;Load next free slot to HL
     ld hl, w_entsys_first32
     ld a, [hl+]
@@ -153,7 +153,7 @@ entsys_new32::
 
     .out_of_32
     call entsys_new64
-    
+
     ;Save buddy for next allocation
     ld hl, w_entsys_first32
     ld a, c

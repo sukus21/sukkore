@@ -11,7 +11,7 @@ SECTION "RNG", ROM0
 ; Saves: `bc`, `de`, `hl`
 rng_run_single::
     push hl
-    
+
     ;Call RNG routine
     ld hl, h_rng_seed
     call rng_tick
@@ -67,7 +67,7 @@ rng_run::
 ; Destroys: `f`
 ; Saves: `bc`, `de`
 rng_tick:
-    
+
     ;Shift left
     ld a, [hl]
     sla a

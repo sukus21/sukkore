@@ -20,7 +20,7 @@ entsys_collision_rr8::
     ;if(rect1.X < rect2.X)
     ld a, [bc]
     cp a, [hl]
-    
+
     jr nc, .higherX
 
         ;if(rect1.x < rect2.X)
@@ -101,7 +101,7 @@ entsys_collision_rr8::
 entsys_collision_rr16::
     ld h, d
     ld l, e
-    
+
     ;if(rect1.X < rect2.X)
     ld a, [bc]
     inc c
@@ -242,7 +242,7 @@ entsys_collision_rr16::
 entsys_collision_pr16::
     ld h, d
     ld l, e
-    
+
     ;if(point.X < rect.X)
     ld a, [bc]
     ld e, a ;save point high X in e

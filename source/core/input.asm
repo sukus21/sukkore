@@ -12,7 +12,7 @@ SECTION "INPUT", ROM0
 ; Saves: `e`, `hl`
 ; Destroys: `af`, `bc`, `d`
 input::
-    
+
     ;Previous buttons pressed
     ldh a, [h_input]
     ld d, a

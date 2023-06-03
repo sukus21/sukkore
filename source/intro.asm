@@ -224,7 +224,7 @@ intro::
 ; Returns:
 ; - `e`: Input opacity
 intro_faderoutine:
-    
+
     ;Check if this is a color machine or not
     ldh a, [h_is_color]
     cp a, 0

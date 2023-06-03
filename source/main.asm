@@ -1,7 +1,7 @@
 INCLUDE "hardware.inc"
 
 SECTION "ENTRY POINT", ROM0[$0100]
-    
+
     ;Disable interupts and jump
     di
     jp setup

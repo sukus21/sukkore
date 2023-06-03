@@ -39,7 +39,7 @@ setup::
     ;Set setup variable to true
     ld a, 1
     ldh [h_setup], a
-    
+
     ;Do my intro with the logo
     ;call intro
 
@@ -47,7 +47,7 @@ setup::
 ; Skip GBC detection and RNG reset.
 ; Lives in ROM0.
 .partial::
-    
+
     ;Wait for Vblank
     di
     xor a

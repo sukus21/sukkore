@@ -7,7 +7,7 @@ SECTION "SPRITES", ROM0
 ; DO NOT CALL!
 ; Lives in ROM0.
 dma_routine:
-    
+
     ;Initialize OAM DMA
     ld a, HIGH(w_oam_mirror)
     ldh [rDMA], a
@@ -31,7 +31,7 @@ dma_routine:
 ;
 ; Destroys: all
 sprite_setup::
-    
+
     ;Copy DMA routine to HRAM
     ld hl, h_dma_routine
     ld bc, dma_routine
@@ -93,7 +93,7 @@ sprite_finish::
         inc l
         cp a, l
         jr nz, :-
-    
+
     ;Reset sprite count and return
     xor a
     ldh [h_sprite_slot], a
