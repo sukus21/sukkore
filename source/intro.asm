@@ -62,7 +62,7 @@ intro::
     ld hl, _VRAM + $1000
     ld bc, intro_tileset
     ld de, intro_tileset.end - intro_tileset
-    call memcopy
+    call memcpy
 
     ;Copy tilemap
     xor a
@@ -79,7 +79,7 @@ intro::
         ld bc, intro_tilemap.dmg
     :
         ld de, 20
-        call memcopy
+        call memcpy
         ld a, l
         and a, %11100000
         add a, 32
@@ -105,7 +105,7 @@ intro::
         ld hl, _SCRN0
         ld b, 1
         ld de, $400
-        call memfill
+        call memset
 
         ;Make face use palette 0
         ld hl, _SCRN0 + 6 + (32 * 3)

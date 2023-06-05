@@ -15,7 +15,7 @@ SECTION "SNIPPETS", ROM0
 ; - `bc`: Source + Byte count
 ;
 ; Destroys: `af`, `de`
-memcopy::
+memcpy::
 
     ;Copy the data
     ld a, [bc]
@@ -26,7 +26,7 @@ memcopy::
     ;Check byte count
     ld a, d
     or e
-    jr nz, memcopy
+    jr nz, memcpy
 
     ;Return
     ret 
@@ -47,7 +47,7 @@ memcopy::
 ; - `bc`: Source + Byte count
 ;
 ; Saves: `e`
-memcopy_short::
+memcpy_short::
 
     ;Copy the data
     ld a, [bc]
@@ -56,7 +56,7 @@ memcopy_short::
 
     ;Check byte count
     dec d
-    jr nz, memcopy_short
+    jr nz, memcpy_short
 
     ;Return
     ret 
@@ -77,7 +77,7 @@ memcopy_short::
 ; - `de`: `$0000`
 ;
 ; Destroys: `af`
-memfill::
+memset::
 
     ;Fill data
     ld a, b
@@ -87,7 +87,7 @@ memfill::
     ;Check byte count
     ld a, d
     or e
-    jr nz, memfill
+    jr nz, memset
 
     ;Return
     ret
@@ -95,7 +95,7 @@ memfill::
 
 
 
-; Same as memcopy, but only stops once 0 is seen.
+; Same as memcpy, but only stops once 0 is seen.
 ; Made specifically to copy text.
 ; Lives in ROM0.
 ;
@@ -104,7 +104,7 @@ memfill::
 ; - `bc`: Source
 ;
 ; Saves: `de`
-strcopy::
+strcpy::
 
     ;Read character from stream
     ld a, [bc]

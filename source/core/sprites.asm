@@ -36,13 +36,13 @@ sprite_setup::
     ld hl, h_dma_routine
     ld bc, dma_routine
     ld de, 10
-    call memcopy
+    call memcpy
 
     ;Clear shadow OAM
     ld hl, w_oam_mirror
     ld b, 0
     ld de, $A0
-    call memfill
+    call memset
 
     ;Return
     ret

@@ -30,7 +30,7 @@ rectangle_load::
     ld hl, _VRAM + rectangle_tiles * 16
     ld bc, rectangle_tileset
     ld d, 4*16
-    jp memcopy_short
+    jp memcpy_short
 ;
 
 

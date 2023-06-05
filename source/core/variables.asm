@@ -19,19 +19,19 @@ variables_init::
     ld hl, w_variables ;Start of variable space
     ld bc, var_w0 ;Initial variable data
     ld de, var_w0_end - var_w0 ;Data length
-    call memcopy
+    call memcpy
 
     ;Copy WRAMX variables
     ld hl, w_entsys ;Start of variable space
     ld bc, var_wx ;Initial variable data
     ld de, var_wx_end - var_wx ;Data length
-    call memcopy
+    call memcpy
 
     ;Copy HRAM variables
     ld hl, h_variables ;Start of variable space
     ld bc, var_h ;Initial variable data
     ld de, var_h_end - var_h ;Data length
-    call memcopy
+    call memcpy
 
     ;Return
     ret

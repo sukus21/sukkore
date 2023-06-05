@@ -193,7 +193,7 @@ sinewave:
     ld b, 0
     ld de, $2000
     ld hl, _VRAM
-    call memfill
+    call memset
 
     ;Clear VRAM again, but for the second VRAM bank
     ld a, 1
@@ -201,7 +201,7 @@ sinewave:
     ld b, 0
     ld de, $2000
     ld hl, $8000
-    call memfill
+    call memset
     xor a
     ldh [rVBK], a
 
@@ -251,30 +251,30 @@ sinewave:
     ld hl, $9000
     ld bc, error_tiles
     ld de, $0800
-    call memcopy
+    call memcpy
     ld hl, $8800
     ld de, error_tiles.end - error_tiles - $0800
-    call memcopy
+    call memcpy
 
     ;Load numbers into VRAM
     ld hl, $8900
     ld bc, error_font + $100
     ld de, 16*10
-    call memcopy
+    call memcpy
     ld bc, error_font + 33*16
     ld de, 16*6
-    call memcopy
+    call memcpy
 
     ;Copy font into VRAM
     ld bc, error_font
     ld de, $0600
-    call memcopy
+    call memcpy
 
     ;Copy sprites into VRAM
     ld hl, $8000
     ld bc, error_sprites
     ld de, error_sprites.end - error_sprites
-    call memcopy
+    call memcpy
 
     ;Load map into VRAM
     ld bc, error_map
@@ -317,7 +317,7 @@ sinewave:
     ld hl, w_oam_mirror
     ld bc, error_spritedata
     ld de, $A0
-    call memcopy
+    call memcpy
 
     ;Update OAM
     call h_dma_routine
