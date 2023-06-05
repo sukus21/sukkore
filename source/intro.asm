@@ -1,5 +1,5 @@
 INCLUDE "hardware.inc"
-INCLUDE "color.inc"
+INCLUDE "macros/color.inc"
 
 SECTION "INTRO", ROM0, ALIGN[8]
 

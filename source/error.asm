@@ -1,5 +1,5 @@
 INCLUDE "hardware.inc"
-INCLUDE "color.inc"
+INCLUDE "macros/color.inc"
 
 SECTION "ERROR SCREEN VECTOR", ROM0[$0038]
     
@@ -239,7 +239,7 @@ sinewave:
         ld b, h
         ld c, l
         ld hl, $9AC0
-        call strcopy
+        call strcpy
         ld a, $FF
     .nomessage
     ldh [h_setup], a

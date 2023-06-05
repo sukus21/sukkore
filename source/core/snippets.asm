@@ -116,7 +116,7 @@ strcpy::
 
     ;Write character to output and continue
     ld [hl+], a
-    jr strcopy
+    jr strcpy
 ;
 
 
