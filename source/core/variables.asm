@@ -1,4 +1,5 @@
 INCLUDE "hardware.inc"
+INCLUDE "entsys.inc"
 
 ;Allocate 256 bytes for the stack, just to be safe
 stack_size equ $100
@@ -67,12 +68,13 @@ var_w0:
 var_wx:
     LOAD "WRAMX VARIABLES", WRAMX, ALIGN[8]
         w_entsys::
-            REPT 256
+            REPT entsys_entity_count
                 w_entsys_bank_\@: db $00
                 w_entsys_next_\@: db $40
                 w_entsys_step_\@: dw $0000
                 ds 12
             ENDR
+            w_entsys_end::
         ;
     ENDL
     var_wx_end:
