@@ -295,6 +295,14 @@ entsys_new64::
 
 
 
+; Free an entity slot.
+; Size is figured out automatically.
+; Lives in ROM0.
+;
+; Input:
+; - `hl`: Entity slot pointer
+;
+; Saves: none
 entsys_free::
     ;Clear bank and get size
     xor a
@@ -315,8 +323,15 @@ entsys_free::
 
 
 
-; Documentation
-entsys_free16::
+; Helper routine for freeing 1-chunk entities.
+; Input entity is assumed to be 1-chunk.
+; Lives in ROM0.
+;
+; Input:
+; - `hl`: Entity slot pointer
+;
+; Saves: none
+entsys_free16:
     ;Get buddy chunk
     ld c, l
     ld a, l
@@ -392,8 +407,16 @@ entsys_free16::
 
 
 
-; Documentation
-entsys_free32::
+; Helper routine for freeing 2-chunk entities.
+; Input entity is assumed to be 2-chunk.
+; If needed, updates `w_entsys_first16`.
+; Lives in ROM0.
+;
+; Input:
+; - `hl`: Entity slot pointer
+;
+; Saves: none
+entsys_free32:
     ;Get buddy chunk
     ld c, l
     ld a, l
@@ -468,8 +491,16 @@ entsys_free32::
 
 
 
-; Documentation
-entsys_free64::
+; Helper method for freeing 4-chunk entities.
+; Input entity is assumed to be 4-chunk.
+; Might update `w_entsys_first32` and `w_entsys_first16`.
+; Lives in ROM0.
+;
+; Input:
+; - `hl`: Entity slot pointer
+;
+; Saves: none
+entsys_free64:
     ;Get first-pointer in BC
     ld de, w_entsys_first64
     ld a, [de]
