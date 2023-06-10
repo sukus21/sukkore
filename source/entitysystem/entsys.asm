@@ -66,15 +66,13 @@ entsys_new16::
     ;Jump to different path if we're out of 16-bit slots
     bit 7, h
     jr z, .out_of_16
-
-    ;Store allocated slot in BC
-    ld b, h
-    ld c, l
+    push hl
 
     ;Load next free slot into DE
-    set 1, l
-    ld a, [hl+]
-    ld d, [hl]
+    ld c, $10
+    call entsys_find_free
+    ld a, l
+    ld d, h
 
     ;Save next free slot for next allocation
     ld hl, w_entsys_first16
@@ -82,6 +80,7 @@ entsys_new16::
     ld [hl], d
 
     ;Return
+    pop bc
     ret
 
     .out_of_16
