@@ -102,6 +102,8 @@ gameloop_test::
     ldh a, [h_input_pressed]
     bit PADB_A, a
     jr z, .no_alloc
+        ld c, 1
+        call wait_scanline
         ld a, [w_buffer+130]
         cp a, 0
         jr nz, :+
@@ -122,6 +124,8 @@ gameloop_test::
         ;Set entity bank to 1
         ld a, 1
         ld [bc], a
+        ldh a, [rLY]
+        ld [w_buffer+131], a
     .no_alloc
 
     ;Free entities
@@ -189,12 +193,16 @@ gameloop_test::
     ldh a, [h_input_pressed]
     bit PADB_B, a
     jr z, .no_free
+        ld c, 1
+        call wait_scanline
         ld l, d
         swap l
         ld a, high(w_entsys)
         add a, e
         ld h, a
         call entsys_free
+        ldh a, [rLY]
+        ld [w_buffer+131], a
     .no_free
 
     ;Get quick status of all entities
@@ -286,6 +294,26 @@ gameloop_test::
     ld [hl+], a
     ld a, c
     ld [hl+], a
+
+    ;Create sprites for performance metric
+    ld a, [w_buffer+131]
+    num_to_hex a, d, e
+    ld b, 8
+    call sprite_get
+    ld h, high(w_oam_mirror)
+    ld l, a
+    ld [hl], 64
+    inc l
+    ld [hl], 24
+    inc l
+    ld [hl], d
+    inc l
+    inc l
+    ld [hl], 64
+    inc l
+    ld [hl], 32
+    inc l
+    ld [hl], e
 
     ;Wait for Vblank
     call sprite_finish
