@@ -5,20 +5,21 @@ SECTION "INPUT", ROM0
 ; Bits 0-3 = buttons, bits 4-7 = dpad.
 ; Lives in ROM0.
 ;
-; Output:
+; Returns:
 ; - `b`: Byte of buttons held
 ; - `c`: Byte of buttons pressed
 ;
+; Saves: `e`, `hl`
 ; Destroys: `af`, `bc`, `d`
 input::
-    
+
     ;Previous buttons pressed
     ldh a, [h_input]
     ld d, a
+    ld c, low(rP1)
 
     ;Set up for reading the buttons
-    ld c, 0
-    ld a, %00100000
+    ld a, P1F_GET_BTN
     ldh [c], a
     ldh [c], a
     nop 
@@ -32,12 +33,11 @@ input::
     ldh a, [c]
     ldh a, [c]
     ldh a, [c]
-    swap a
-    and a, %11110000
+    and a, %00001111
     ld b, a
 
     ;Set up for reading the DPAD
-    ld a, %00010000
+    ld a, P1F_GET_DPAD
     ldh [c], a
     ldh [c], a
     nop 
@@ -52,6 +52,7 @@ input::
     ldh a, [c]
     ldh a, [c]
     and a, %00001111
+    swap a
     or a, b
     cpl
     ld b, a

@@ -10,13 +10,12 @@ SECTION "SNIPPETS", ROM0
 ; - `bc`: Source
 ; - `de`: Byte count
 ;
-; Output:
+; Returns:
 ; - `hl`: Destination + Byte count
 ; - `bc`: Source + Byte count
-; - `de`: `$0000`
 ;
-; Destroys: `af`
-memcopy::
+; Destroys: `af`, `de`
+memcpy::
 
     ;Copy the data
     ld a, [bc]
@@ -27,7 +26,37 @@ memcopy::
     ;Check byte count
     ld a, d
     or e
-    jr nz, memcopy
+    jr nz, memcpy
+
+    ;Return
+    ret 
+;
+
+
+
+; Copies data from one location to another using the CPU.
+; Lives in ROM0.
+;
+; Input:
+; - `hl`: Destination
+; - `bc`: Source
+; - `d`: Byte count
+;
+; Returns:
+; - `hl`: Destination + Byte count
+; - `bc`: Source + Byte count
+;
+; Saves: `e`
+memcpy_short::
+
+    ;Copy the data
+    ld a, [bc]
+    ld [hl+], a
+    inc bc
+
+    ;Check byte count
+    dec d
+    jr nz, memcpy_short
 
     ;Return
     ret 
@@ -43,12 +72,12 @@ memcopy::
 ; - `b`: Fill byte
 ; - `de`: Byte count
 ;
-; Output:
+; Returns:
 ; - `hl`: Destination + Byte count
 ; - `de`: `$0000`
 ;
 ; Destroys: `af`
-memfill::
+memset::
 
     ;Fill data
     ld a, b
@@ -58,7 +87,7 @@ memfill::
     ;Check byte count
     ld a, d
     or e
-    jr nz, memfill
+    jr nz, memset
 
     ;Return
     ret
@@ -66,15 +95,17 @@ memfill::
 
 
 
-; Same as memcopy, but only stops once 0 is seen.
+; Same as memcpy, but only stops once 0 is seen.
 ; Made specifically to copy text.
 ; Lives in ROM0.
 ;
 ; Input:
 ; - `hl`: Destination
 ; - `bc`: Source
-strcopy::
-    
+;
+; Saves: `de`
+strcpy::
+
     ;Read character from stream
     ld a, [bc]
     inc bc
@@ -85,7 +116,7 @@ strcopy::
 
     ;Write character to output and continue
     ld [hl+], a
-    jr strcopy
+    jr strcpy
 ;
 
 
@@ -97,8 +128,10 @@ strcopy::
 ; - `hl`: String 1
 ; - `de`: String 2
 ;
-; Output:
+; Returns:
 ; `fz`: Strings are equal (z=1, strings are equal)
+;
+; Saves: `bc`
 strcomp::
 
     ;Compare values, return if they don't match
@@ -126,11 +159,12 @@ strcomp::
 ; - `hl`: Palette address
 ; - `a`: Palette index * 8
 ;
-; Output:
+; Returns:
 ; - `hl`: `$0010`
 ; - `a`: `$08`
 ;
 ; Destroys: `bc`
+; Saves: `de`
 palette_copy_bg::
 
     ;Write palette index
@@ -163,11 +197,12 @@ palette_copy_bg::
 ; - `hl`: Palette address
 ; - `a`: Palette index * 8
 ;
-; Output:
+; Returns:
 ; - `hl`: Palette address + `$10`
 ; - `a`: Palette index + `$08`
 ;
 ; Destroys: `bc`
+; Saves: `de`
 palette_copy_spr::
 
     ;Write palette index
@@ -198,10 +233,12 @@ palette_copy_spr::
 ; 
 ; Input:
 ; - `hl`: Palette address
+;
+; Saves: `de`
 palette_copy_all::
 
     ;Set up background palette transfer
-    ld a, $80
+    ld a, BCPSF_AUTOINC
     ldh [rBCPS], a
     ld c, low(rBCPD)
     ld b, 8
@@ -220,7 +257,7 @@ palette_copy_all::
     ;
 
     ;Set up sprite palette transfer
-    ld a, $80
+    ld a, OCPSF_AUTOINC
     ldh [rOCPS], a
     ld c, low(rOCPD)
     ld b, 8
@@ -251,13 +288,12 @@ palette_copy_all::
 ; Input:
 ; - `hl`: Where to store the new palettes
 ; 
-; Destroys: all (probably)
+; Destroys: all
 palette_make_lighter::
-
     ld d, h
     ld e, l
     push hl
-    
+
     ;First, copy all palettes to the destination
     ld hl, rBCPS
     ld [hl], 0
@@ -265,7 +301,6 @@ palette_make_lighter::
     ld b, $40
 
     .copybg
-        
         ldh a, [c]
         ld [de], a
         inc de
@@ -281,7 +316,6 @@ palette_make_lighter::
     ld b, $40
 
     .copyobj
-        
         ldh a, [c]
         ld [de], a
         inc de
@@ -290,13 +324,13 @@ palette_make_lighter::
         jr nz, .copyobj
     ;
 
-    
-    
+
+
     ;Initialize modifying
     pop hl
     ld b, $40
     push bc
-    
+
     .modify
         ld a, [hl+]
         ld e, a
@@ -393,6 +427,7 @@ bank_call_0::
 ; - `hl`: Address to jump to
 ;
 ; Destroys: `a`, unknown
+; Saves: `rROMB0`
 bank_call_x::
 
     ;Set up things for returning
@@ -420,7 +455,6 @@ bank_call_x::
 
 ; Switches bank and calls a given address.
 ; Switches banks back after returning.
-; Also saves and restores WRAMX bank on GBC.
 ; Lives in ROM0.
 ;
 ; Input:
@@ -428,6 +462,7 @@ bank_call_x::
 ; - `hl`: Address to jump to
 ;
 ; Destroys: `a`, unknown
+; Saves: `rROMB0`
 bank_call_xd::
 
     ;Store current bank number
@@ -446,7 +481,7 @@ bank_call_xd::
     pop af
     ldh [h_bank_number], a
     ld [rROMB0], a
-    
+
     ;Return
     ret 
 ;
@@ -466,6 +501,36 @@ _hl_::
 
 
 
+; Jumps to the address of BC.
+; Avoid using this if possible, only exists for completeness.
+; Lives in ROM0.
+;
+; Input:
+; - `bc`: Address to jump to
+;
+; Destroys: unknown
+_bc_:
+    push bc
+    ret 
+;
+
+
+
+; Jumps to the address of DE.
+; Avoid using this if possible, only exists for completeness.
+; Lives in ROM0.
+;
+; Input:
+; - `de`: Address to jump to
+;
+; Destroys: unknown
+_de_:
+    push de
+    ret 
+;
+
+
+
 ; Set CPU speed.
 ; Lives in ROM0.
 ;
@@ -473,17 +538,18 @@ _hl_::
 ; - `b.7`: Desired speed
 ;
 ; Destroys: `a`, `hl`
+; Saves: `e`
 cpu_speedtogle::
-    
+
     ;Ignore ENTIRELY if not on a color machine
     ldh a, [h_is_color]
     cp a, 0
     ret z
-    
+
     ;Ignore function call if CPU speed is already as desired
     ld hl, rKEY1
     ld a, [hl]
-    and a, %10000000
+    and a, KEY1F_DBLSPEED
     cp a, b
     ret z
 
@@ -494,12 +560,12 @@ cpu_speedtogle::
     ldh [rIE], a
     ld a, b
     ldh [rKEY1], a
-    ld a, $30
+    ld a, P1F_GET_NONE
     ldh [rP1], a
     stop 
     ld a, d
     ldh [rIE], a
-    
+
     ;Return
     ret
 ;
@@ -515,8 +581,9 @@ cpu_speedtogle::
 ; - `c`: Desired scanline
 ;
 ; Destroys: `af`, `hl`, `b`
+; Saves: `de`
 wait_scanline::
-    
+
     ;Wait for scanline
     dec c
     ld hl, rLY
@@ -526,8 +593,8 @@ wait_scanline::
     jr nz, :-
 
     ;Scanline has been hit, wait for mode 0
-    ld l, low(rSTAT)
-    ld b, %00000011
+    ld l, low(rSTAT) ;h was set to $FF previously
+    ld b, STATF_LCD
     :
     ld a, [hl]
     and a, b
@@ -535,4 +602,55 @@ wait_scanline::
 
     ;Return
     ret 
+;
+
+
+
+; Detect if current hardware is GBC compatible or not.
+; Lives in ROM0.
+; 
+; Returns:
+; - `a`: result (0 = not CGB compatible)
+; - `fZ`: result (0 = CGB compatible)
+; - `fC`: result (1 = CGB compatible)
+;
+; Saves: none
+detect_gbc::
+    ld hl, _RAMBANK
+    ld c, low(rSVBK)
+
+    ;Save bank page
+    ldh a, [c]
+    ld b, a
+
+    ;Overwrite byte 1
+    ld a, 1
+    ldh [c], a
+    ld d, [hl]
+    ld [hl], a
+
+    ;Overwrite byte 2
+    inc a
+    ldh [c], a
+    ld e, [hl]
+    ld [hl], a
+
+    ;Compare
+    dec a
+    ldh [c], a
+    ld a, [hl]
+    sub a, 2
+
+    ;Restore without altering flags
+    ld [hl], d
+    ld d, a
+    ld a, 1
+    ldh [c], a
+    ld [hl], e
+    ld a, b
+    ld [c], a
+
+    ;Return
+    ld a, d
+    ret
 ;

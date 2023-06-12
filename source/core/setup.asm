@@ -1,5 +1,5 @@
 INCLUDE "hardware.inc"
-INCLUDE "color.inc"
+INCLUDE "macros/color.inc"
 
 SECTION "SETUP", ROM0
 
@@ -9,22 +9,7 @@ setup::
 
     ;Is this GBC hardware?
     ld sp, w_stack
-
-    ;Write 1 to WRAM1
-    ld hl, _RAMBANK
-    ld a, 1
-    ldh [rSVBK], a
-    ld [hl], 1
-
-    ;Write 0 to WRAM2
-    inc a
-    ldh [rSVBK], a
-    ld [hl], 0
-
-    ;Try to read 1 back from WRAM1
-    dec a
-    ldh [rSVBK], a
-    ld a, [hl]
+    call detect_gbc
 
     ;What did we get?
     ldh [h_is_color], a
@@ -32,12 +17,10 @@ setup::
     jr z, .is_DMG
         
         ;CGB machine
-        ld b, b
         jr .is_CGB
 
     .is_DMG
         ;DMG machine
-        ld b, b
         ;fallthrough
 
     .is_CGB
@@ -56,15 +39,15 @@ setup::
     ;Set setup variable to true
     ld a, 1
     ldh [h_setup], a
-    
+
     ;Do my intro with the logo
-    call intro
+    ;call intro
 
 
 ; Skip GBC detection and RNG reset.
 ; Lives in ROM0.
 .partial::
-    
+
     ;Wait for Vblank
     di
     xor a

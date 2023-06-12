@@ -4,17 +4,16 @@ SECTION "SPRITES", ROM0
 
 ; DMA routune to be copied to HRAM.
 ; Kept here for the sake of the error handler.
+; DO NOT CALL!
 ; Lives in ROM0.
-;
-; DO NOT CALL!!!
 dma_routine:
-    
+
     ;Initialize OAM DMA
     ld a, HIGH(w_oam_mirror)
     ldh [rDMA], a
 
     ;Wait until transfer is complete
-    ld a, 40
+    ld a, OAM_COUNT
     .wait
         dec a
         jr nz, .wait
@@ -32,18 +31,18 @@ dma_routine:
 ;
 ; Destroys: all
 sprite_setup::
-    
+
     ;Copy DMA routine to HRAM
     ld hl, h_dma_routine
     ld bc, dma_routine
     ld de, 10
-    call memcopy
+    call memcpy
 
     ;Clear shadow OAM
     ld hl, w_oam_mirror
     ld b, 0
-    ld de, $9F
-    call memfill
+    ld de, $A0
+    call memset
 
     ;Return
     ret
@@ -57,8 +56,10 @@ sprite_setup::
 ; Input:
 ; - `b`: Sprite count * 4
 ;
-; Output:
+; Returns:
 ; - `a`: lower sprite address byte
+;
+; Saves: `bc`, `de`, `hl`
 sprite_get::
 
     ;Allocate B amount of sprites
@@ -77,6 +78,7 @@ sprite_get::
 ; Lives in ROM0.
 ;
 ; Destroys: `hl`
+; Saves: `bc`, `de`
 sprite_finish::
 
     ;Get pointer to first unused sprite
@@ -91,7 +93,7 @@ sprite_finish::
         inc l
         cp a, l
         jr nz, :-
-    
+
     ;Reset sprite count and return
     xor a
     ldh [h_sprite_slot], a
