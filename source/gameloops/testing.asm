@@ -23,6 +23,20 @@ SECTION "GAMELOOP TEST", ROM0
 ; or after resetting the stack.
 ; Lives in ROM0.
 gameloop_test::
+    ld hl, sp+0
+    ld sp, _SCRN0 + $0800
+    ld bc, $0000
+    ld d, b
+
+    ;Clear tilemaps
+    .clear_tilemap
+    push bc
+    push bc
+    push bc
+    push bc
+    dec d
+    jr nz, .clear_tilemap
+    ld sp, hl
 
     ;Load tile font
     ld bc, testloop_font

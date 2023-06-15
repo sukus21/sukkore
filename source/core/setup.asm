@@ -43,8 +43,8 @@ setup::
     ldh [h_setup], a
 
     ;Do my intro with the logo
-    ;call intro
-
+    call intro
+    ;falls into .partial
 
 ; Skip GBC detection and RNG reset.
 ; Lives in ROM0.
