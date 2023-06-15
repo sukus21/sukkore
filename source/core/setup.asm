@@ -33,7 +33,9 @@ setup::
         ;Game DOES require GBC functionality
         ldh a, [h_is_color]
         cp a, 0
-        jr z, @+1 ;rst v_error
+        jr nz, :+
+        ld hl, error_color_required
+        rst v_error
     :
 
     ;Set setup variable to true

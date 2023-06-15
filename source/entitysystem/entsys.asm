@@ -3,7 +3,7 @@ INCLUDE "hardware.inc"
 SECTION "ENTSYS", ROM0
 
 ; Execution code prototyping.
-; Passed entity pointer in DE to step functions.
+; Passes entity pointer in DE to step functions.
 ; Lives in ROM0.
 ; 
 ; Destroys: all
@@ -39,7 +39,7 @@ entsys_step::
         jr nc, .loop
         inc h
         ld a, h
-        cp a, $E0 ;ERAM
+        cp a, high(w_entsys_end)
         jr nz, .loop
         ret
     ;
@@ -220,6 +220,14 @@ entsys_new64::
     ld l, a
     ld [hl], $FF ;mark this slot as occupied
     push hl
+
+    ;OOB check
+    ld a, h
+    cp a, high(w_entsys_end)
+    jr c, :+
+        ld hl, error_entityoverflow
+        rst v_error
+    :
 
     ;Move 1-chunk pointer?
     ld a, [w_entsys_first16+1]

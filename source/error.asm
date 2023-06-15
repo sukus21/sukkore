@@ -13,13 +13,17 @@ v_error::
     jp error_start
 ;
 
+
+
 SECTION "ERROR SCREEN LOADER", ROM0
-; Couldn't fit in vector table.
+
+; Could not fit in vector table.
+; Lives in ROM0.
 error_start:
     ld [w_buffer+0], a
-    ld a, bank(sinewave)
+    ld a, bank(gameloop_error)
     ld [rROMB0], a
-    jp sinewave
+    jp gameloop_error
 ;
 
 
@@ -31,22 +35,30 @@ zero: ds 512, $00
 
 ;Gradual sine curve
 grad:
-ANGLE = 0.0
-MULTR = 0.0
+    DEF sine_speed = 4.0
+    DEF sine_power = 8.0
+    DEF angle = 0.0
+    DEF scale = 0.0
     REPT 2048
-ANGLE = ANGLE + 512.0
-MULTR = MULTR + DIV(16.0, 2048.0)
-    db MUL(MULTR, SIN(ANGLE)) >> 17
+        DEF angle += DIV(sine_speed, 256.0)
+        DEF scale += DIV(sine_power, 2048.0)
+        db MUL(scale, SIN(angle)) >> 16
     ENDR
+;
 
 ;Regular sine curve
 sine:
-ANGLE = 0.0
+    DEF angle = 0.0
     REPT 512
-    db MUL(16.0, SIN(ANGLE)) >> 17
-ANGLE = ANGLE + 512.0
+        DEF angle += DIV(sine_speed, 256.0)
+        db MUL(sine_power, SIN(angle)) >> 16
     ENDR
 
+    PURGE sine_speed
+    PURGE sine_power
+    PURGE angle
+    PURGE scale
+;
 
 
 ;Background tileset
@@ -61,6 +73,7 @@ error_sprites:
     .end
 ;
 
+;Font tiles
 error_font:
     INCBIN "errorscreen/font.tls"
     .end
@@ -69,7 +82,7 @@ error_font:
 ;Tilemap data
 error_map:
     INCBIN "errorscreen/tilemap.tlm"
-    error_map_e:
+    .end
 ;
 
 ;Sprite initialization data
@@ -104,7 +117,7 @@ error_palette_obj:
 ; - `hl`: Pointer to error message
 ;
 ; Destroys: all
-sinewave:
+gameloop_error:
     
     ;Stop everything
     di
@@ -653,5 +666,6 @@ error_messages:
     ;Strings containing error messages
     error_strings:
     error_entityoverflow::  db $FF, $00, "ENTITY OVERFLOW", $00
+    error_color_required::  db $FF, $00, "ONLY PLAYS ON CGB", $00
     POPC
 ;
