@@ -4,7 +4,55 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "run no build",
+            "label": "build",
+            "detail": "build ROM",
+            "type": "shell",
+            "command": "make",
+            "presentation": {
+                "clear": true,
+                "panel": "dedicated"
+            },
+            "problemMatcher": [
+                "$rgbdserror",
+                "$rgbdslinkerror"
+            ]
+        },
+        {
+            "label": "clean",
+            "detail": "clean build directory",
+            "type": "shell",
+            "command": "make clean",
+            "presentation": {
+                "clear": true,
+                "panel": "dedicated"
+            }
+        },
+        {
+            "label": "build clean",
+            "detail": "rebuild ROM from scratch",
+            "dependsOrder": "sequence",
+            "dependsOn": ["clean", "build"],
+            "presentation": {
+                "clear": true,
+                "panel": "dedicated",
+                "reveal": "never"
+            },
+        },
+        {
+            "label": "run",
+            "detail": "build, then launch with default emulator",
+            "type": "shell",
+            "command": "build/build.gb",
+            "dependsOn": ["build"],
+            "presentation": {
+                "clear": true,
+                "panel": "dedicated",
+                "reveal": "never"
+            },
+        },
+        {
+            "label": "re-run",
+            "detail": "re-runs default emulator without building",
             "type": "shell",
             "command": "build/build.gb",
             "problemMatcher": [],
@@ -16,70 +64,9 @@
         },
         {
             "label": "run clean",
+            "detail": "do a clean build, open with default emulator",
             "dependsOrder": "sequence",
             "dependsOn": ["clean", "build", "run"],
-            "problemMatcher": [],
-            "presentation": {
-                "clear": true,
-                "panel": "dedicated",
-                "reveal": "never"
-            },
-        },
-        {
-            "label": "run",
-            "type": "shell",
-            "command": "build/build.gb",
-            "dependsOn": ["build"],
-            "problemMatcher": [],
-            "presentation": {
-                "clear": true,
-                "panel": "dedicated",
-                "reveal": "never"
-            },
-        },
-        {
-            "label": "build",
-            "type": "shell",
-            "command": "make",
-            "presentation": {
-                "clear": true,
-                "panel": "dedicated"
-            },
-            "problemMatcher": [
-              "$rgbdserror",
-              "$rgbdslinkerror"
-            ]
-        },
-        {
-            "label": "clean",
-            "type": "shell",
-            "command": "make clean",
-            "presentation": {
-                "clear": true,
-                "panel": "dedicated"
-            },
-            "problemMatcher": [
-              "$rgbdserror",
-              "$rgbdslinkerror"
-            ]
-        },
-        {
-            "label": "Launch Emulicious",
-            "type": "shell",
-            "command": "../../emulicious/Emulicious.exe",
-            "presentation": {
-                "clear": false,
-                "panel": "dedicated"
-            },
-            "problemMatcher": [
-              "$rgbdserror",
-              "$rgbdslinkerror"
-            ]
-        },
-        {
-            "label": "build clean",
-            "dependsOrder": "sequence",
-            "dependsOn": ["clean", "build"],
             "problemMatcher": [],
             "presentation": {
                 "clear": true,
