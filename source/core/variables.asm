@@ -1,12 +1,37 @@
 INCLUDE "hardware.inc"
 INCLUDE "entsys.inc"
+INCLUDE "macros/color.inc"
+INCLUDE "struct/oam_mirror.inc"
+INCLUDE "struct/vqueue.inc"
+
+SECTION "DMA INIT", ROM0
+
+; Initializes DMA routine only.
+; Lives in ROM0.
+;
+; Saves: none
+dma_init::
+    ld hl, h_dma
+    ld bc, var_h + (h_dma - h_variables)
+    ld d, h_dma.end - h_dma
+
+    ;Return directly after copying
+    jp memcpy_short
+;
+
+
 
 ;Allocate 256 bytes for the stack, just to be safe
-DEF stack_size equ $100
-SECTION "STACK", WRAM0[$D000 - stack_size]
-    w_stack_begin:: ds stack_size ;Top of stack
-    w_stack:: ds $00 ;Base of stack
-    ASSERT w_stack_begin + stack_size == $D000 ;Make sure things work out
+DEF STACK_SIZE EQU $100
+SECTION "STACK", WRAM0[_RAMBANK - STACK_SIZE]
+    ; Top of stack.
+    w_stack_begin:: ds STACK_SIZE
+
+    ; Base of stack.
+    w_stack:: ds $00
+
+    ;Make sure things work out
+    ASSERT w_stack_begin + STACK_SIZE == _RAMBANK
 ;
 
 
@@ -22,17 +47,19 @@ variables_init::
     ld de, var_w0_end - var_w0 ;Data length
     call memcpy
 
-    ;Copy WRAMX variables
-    ld hl, w_entsys ;Start of variable space
-    ld bc, var_wx ;Initial variable data
-    ld de, var_wx_end - var_wx ;Data length
-    call memcpy
+    ;Initialize entity system
+    call entsys_clear
+
+    ;Initialize OAM mirrors
+    ld hl, w_oam
+    ld bc, $00_00
+    call memset_short
 
     ;Copy HRAM variables
     ld hl, h_variables ;Start of variable space
     ld bc, var_h ;Initial variable data
-    ld de, var_h_end - var_h ;Data length
-    call memcpy
+    ld d, var_h_end - var_h ;Data length
+    call memcpy_short
 
     ;Return
     ret
@@ -42,54 +69,98 @@ variables_init::
 
 ; Contains the initial values of all variables in WRAM0.
 var_w0:
-    LOAD "WRAM0 VARIABLES", WRAM0, ALIGN[8]
+    LOAD "WRAM0 INITIALIZED", WRAM0, ALIGN[8]
         w_variables:
 
-        ;256 bytes of memory that can be used for anything.
+        ; 256 bytes of memory that can be used for anything.
         w_buffer:: ds 256
 
-        ;Sprite stuff
-        w_oam_mirror:: ds $A4, $00
-        ASSERT low(w_oam_mirror) == 0
-
-        ;That intro thing
+        ; Intro state.
+        ; Only used in `source/intro.asm`.
         w_intro_state:: db $00
+
+        ; Intro timer.
+        ; Only used in `source/intro.asm`.
         w_intro_timer:: db $00
 
-        ;Entity system variables
+        ; First known 1-chunk entity slot.
         w_entsys_first16:: dw $0000
+
+        ; First known 2-chunk entity slot.
         w_entsys_first32:: dw $0000
+
+        ; First known 4-chunk entity slot.
         w_entsys_first64:: dw w_entsys
+
+        ; Stack-position to exit an entity's gameloop.
+        w_entsys_exit:: dw $0000
+
+        ; Added to camera X-position every frame.
+        w_camera_xspeed:: dw $0000
+
+        ; Camera offset in pixels.
+        w_camera_xpos:: dw $4000
+
+        ; Color palette for CGB mode.
+        w_cgb_palette::
+            color_dmg_wht
+            color_dmg_ltg
+            color_dmg_dkg
+            color_dmg_blk
+            ASSERT high(w_cgb_palette) == high(w_cgb_palette+7)
+        ;
+        
+        ; Fade value for scene transitions.
+        w_fade_state:: db $00
+        w_bgp:: dw $0000
+        w_obp0:: dw $0000
+        w_obp1:: dw $0000
+
+        ; If you just need some address, this will do.
+        w_vqueue_writeback:: db $00
+
+        ; Points to the first available vqueue slot.
+        w_vqueue_first:: dw w_vqueue
+
+        ; Array of `VQUEUE_T`.
+        ; Only first entry is all on the same page.
+        w_vqueue:: ds VQUEUE_T * VQUEUE_QUEUE_SIZE, VQUEUE_TYPE_NONE
+        .end::
+        ASSERT high(w_vqueue) == high(w_vqueue + VQUEUE_T)
+
+        ; Rectangle sprite tile ID
+        w_sprite_rectangle:: db $00
+
+        ; Current painter position.
+        w_painter_position:: dw w_paint
+
     ENDL
     var_w0_end:
 ;
 
-; Contains the initial values of all variables in WRAMX.
-var_wx:
-    LOAD "WRAMX VARIABLES", WRAMX, ALIGN[8]
-        w_entsys::
-            REPT entsys_entity_count
-                w_entsys_bank_\@: db $00
-                w_entsys_next_\@: db $40
-                w_entsys_step_\@: dw $0000
-                ds 12
-            ENDR
-            w_entsys_end::
-        ;
-    ENDL
-    var_wx_end:
-;
+
+
+SECTION "HRAM INITIALIZATION", ROM0
 
 ; Contains the initial values for all HRAM variables.
 var_h:
     LOAD "HRAM VARIABLES", HRAM
         h_variables::
 
-        ;OAM DMA routine in HRAM
-        h_dma_routine::
+        ; Collision buffer for faster collision routines.
+        h_colbuf::
+        h_colbuf1:: ds 4
+        h_colbuf2:: ds 4
 
-            ;Initialize OAM DMA
-            ld a, HIGH(w_oam_mirror)
+        ; Run OAM DMA with a pre-specified input.  
+        ; Interrupts should be disabled while this runs.  
+        ; Assumes OAM access.
+        ;
+        ; Input:
+        ; - `a`: High byte of OAM table
+        ;
+        ; Destroys: `af`
+        h_dma::
             ldh [rDMA], a
 
             ;Wait until transfer is complete
@@ -100,29 +171,74 @@ var_h:
 
             ;Return
             ret
+            .end
         ;
 
-        ;Input
+        ; LYC interrupt jump-to routine.
+        ; Contains a single `jp n16` instruction.
+        ; The pointer can be overwritten to whatever you want to jump to.
+        h_LYC::
+            jp v_error
+        ;
+
+        ; Bitfield of buttons held.
+        ; Use with `PADB_*` or `PADF_*` from `hardware.inc`.
         h_input:: db $FF
+
+        ; Bitfield of buttons held.
+        ; Use with `PADB_*` or `PADF_*` from `hardware.inc`.
         h_input_pressed:: db $00
-        ;
 
-        ;Important system variables
+        ; Is set to non-zero when setup is complete.
         h_setup:: db $FF
+
+        ; Non-zero if CGB-mode is enabled.
         h_is_color:: db $FF
+
+        ; Which ROM-bank is currently switched in.
         h_bank_number:: db $01
-        h_sprite_slot:: db $00
-        ;
 
-        ;Shadow scrolling registers
-        h_scx:: db $00
-        h_scy:: db $00
-
-        ;RNG stuff
+        ; RNG variables.
         h_rng::
+
+        ; Seed for the next RNG value.
         h_rng_seed:: db $7E, $B2
+
+        ; Last RNG output.
         h_rng_out:: db $00, $00
-        ;
     ENDL
     var_h_end:
+;
+
+
+
+SECTION "WRAMX UNINITIALIZED", WRAMX, ALIGN[8]
+    ; Entity system.
+    w_entsys::
+        DEF entity_current = 0
+        REPT ENTSYS_CHUNK_COUNT
+            w_entsys_bank_{d:entity_current}: ds 1
+            w_entsys_next_{d:entity_current}: ds 1
+            w_entsys_step_{d:entity_current}: ds 2
+            w_entsys_flags_{d:entity_current}: ds 1
+            w_entsys_ypos_{d:entity_current}: ds 2
+            w_entsys_xpos_{d:entity_current}: ds 2
+            w_entsys_height_{d:entity_current}: ds 1
+            w_entsys_width_{d:entity_current}: ds 1
+            w_entsys_vars_{d:entity_current}: ds 5
+            DEF entity_current += 1
+        ENDR
+        PURGE entity_current
+    w_entsys_end::
+
+    ; Paint buffer.
+    w_paint:: ds $400
+;
+
+
+
+SECTION "WRAM0 UNITITIALIZED", WRAM0, ALIGN[8]
+    ; OAM mirror, used for DMA.
+    w_oam:: ds OAMMIRROR_T
+    ASSERT low(w_oam) == 0
 ;

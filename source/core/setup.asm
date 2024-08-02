@@ -1,14 +1,16 @@
 INCLUDE "hardware.inc"
 INCLUDE "macros/color.inc"
+INCLUDE "macros/farcall.inc"
 
 SECTION "SETUP", ROM0
 
 ; Supposed to run first thing when the game starts.
 ; Lives in ROM0.
 setup::
+    ld sp, w_stack
+    call dma_init
 
     ;Is this GBC hardware?
-    ld sp, w_stack
     call detect_gbc
 
     ;What did we get?
@@ -43,12 +45,14 @@ setup::
     ldh [h_setup], a
 
     ;Do my intro with the logo
-    call intro
-    ;falls into .partial
+    xor a
+    ldh [rSCX], a
+    ldh [rSCY], a
+    farcall intro
 
-; Skip GBC detection and RNG reset.
-; Lives in ROM0.
-.partial::
+    ; Skip GBC detection and RNG reset.
+    ; Lives in ROM0.
+    .partial::
 
     ;Wait for Vblank
     di
@@ -90,9 +94,7 @@ setup::
     .rngskip
 
     ;Setup ALL variables
-    ld hl, variables_init
-    ld b, bank(variables_init)
-    call bank_call_0
+    farcall variables_init
 
     ;Put RNG seed back maybe
     pop af

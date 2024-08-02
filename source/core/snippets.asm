@@ -95,6 +95,36 @@ memset::
 
 
 
+; Sets a number of bytes at a location to a single value.
+; Lives in ROM0.
+;
+; Input:
+; - `hl`: Destination
+; - `b`: Fill byte
+; - `c`: Byte count
+;
+; Returns:
+; - `hl`: Destination + Byte count
+; - `c`: `$00`
+;
+; Destroys: `af`  
+; Saves: `de`
+memset_short::
+
+    ;Fill data
+    ld a, b
+    ld [hl+], a
+    dec c
+
+    ;Check byte count
+    jr nz, memset_short
+
+    ;Return
+    ret
+;
+
+
+
 ; Same as memcpy, but only stops once 0 is seen.
 ; Made specifically to copy text.
 ; Lives in ROM0.
@@ -509,7 +539,7 @@ _hl_::
 ; - `bc`: Address to jump to
 ;
 ; Destroys: unknown
-_bc_:
+_bc_::
     push bc
     ret 
 ;
@@ -524,7 +554,7 @@ _bc_:
 ; - `de`: Address to jump to
 ;
 ; Destroys: unknown
-_de_:
+_de_::
     push de
     ret 
 ;
@@ -652,5 +682,192 @@ detect_gbc::
 
     ;Return
     ld a, d
+    ret
+;
+
+
+
+; Set a CGB palette using a DMG value.
+;
+; Input:
+; - `1`: DMG register
+; - `2`: CGB palette specify register
+; - `3`: CGB palette index (0/1)
+MACRO set_palette
+    ldh [\1], a
+    ldh a, [h_is_color]
+    or a, a
+    ldh a, [\1]
+    ret z
+
+    ;CGB time
+    push bc
+    push hl
+
+    ;Prepare data transfer
+    ld b, a
+    ld c, low(\2)
+    ld a, BCPSF_AUTOINC | (\3 * 8)
+    ldh [c], a
+    inc c
+    ld hl, w_cgb_palette
+
+    ;Start
+    REPT 4
+        ld a, b
+        and a, %00000011
+        add a, a
+        add a, low(w_cgb_palette)
+        ld l, a
+
+        ;Copy color
+        ld a, [hl+]
+        ldh [c], a
+        ld a, [hl+]
+        ldh [c], a
+
+        ;End of loop
+        rrc b
+        rrc b
+    ENDR
+
+    ;Return
+    ld a, b
+    pop hl
+    pop bc
+    ret 
+ENDM
+
+
+
+; Set CGB background palette, as if it was DMG.  
+; Assumes palette access.  
+; Lives in ROM0.
+;
+; Input:
+; - `a`: Palette
+;
+; Destroys: `f`
+set_palette_bgp::
+    ld [w_bgp], a
+    set_palette rBGP, rBCPS, 0
+;
+
+
+
+; Set CGB object palette 0, as if it was DMG.  
+; Assumes palette access.  
+; Lives in ROM0.
+;
+; Input:
+; - `a`: Palette
+;
+; Destroys: `f`
+set_palette_obp0::
+    ld [w_obp0], a
+    set_palette rOBP0, rOCPS, 0
+;
+
+
+; Set CGB object palette 1, as if it was DMG.  
+; Assumes palette access.  
+; Lives in ROM0.
+;
+; Input:
+; - `a`: Palette
+;
+; Destroys: `f`
+set_palette_obp1::
+    ld [w_obp1], a
+    set_palette rOBP1, rOCPS, 1
+;
+
+
+
+; Converts a binary value to BCD.  
+; Lives in ROM0.
+;
+; Input:
+; - `a`: Binary value
+;
+; Returns:
+; - `a`: BCD value
+;
+; Destroys: `f`
+bin2bcd::
+    cp a, 10
+    ret c
+
+    ;Do the conversion
+    push bc
+    ld b, $FF
+    .loop
+        inc b
+        sub a, 10
+        jr nc, .loop
+    ;
+
+    ;Aaand we are done here
+    add a, 10
+    swap b
+    or a, b
+    pop bc
+    ret
+;
+
+
+
+; Converts a BCD value to binary.  
+; Lives in ROM0.
+;
+; Input:
+; - `a`: BCD value
+;
+; Returns:
+; - `a`: Binary value
+;
+; Destroys: `f`, `bc`
+bcd2bin::
+    ld c, a
+    swap a
+    and a, %00001111
+    jr z, .quick
+    ld b, a
+    ld a, c
+    and a, %00001111
+
+    .loop1
+        add a, 10
+        dec b
+        jr nz, .loop1
+    :
+
+    ret
+
+    ;This is all we need
+    .quick
+    ld a, c
+    and a, %00001111
+    ret
+;
+
+
+
+; Call anything from anywhere.  
+; Use with `farcall_x` macro in `macros/farcall.inc`.  
+; Lives in ROM0.
+;
+; Input:
+; - `a`: Bank to switch to
+; - `hl`: Address in bank
+;
+; Destroys: `a`, ``
+farcall_handler_x::
+    ld [rROMB0], a
+    ldh a, [h_bank_number]
+    push af
+    call _hl_
+    pop af
+    ld [rROMB0], a
     ret
 ;

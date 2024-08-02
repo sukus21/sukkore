@@ -1,3 +1,6 @@
+    IF !DEF(MACRO_MEMCPY_INC)
+    DEF MACRO_MEMCPY_INC EQU 1
+
 ; Macro that copies data from one location to another using the CPU.
 ; Auto-optimizes HL+ and single-byte counter.
 ;
@@ -45,3 +48,24 @@ MACRO memcpy_custom
     ENDC
     jr nz, .memcpy_custom_\@
 ENDM
+
+
+
+; Input:
+; - `1`: Source (label)
+; - `2`: Destination
+; - `3`: (optional) Length
+;
+; Destroys: all
+MACRO memcpy_label
+    ld hl, \2
+    ld bc, \1
+    IF _NARG == 3
+        ld de, \3
+    ELSE
+        ld de, \1.end - \1
+    ENDC
+    call memcpy
+ENDM
+
+    ENDC

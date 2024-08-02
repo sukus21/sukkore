@@ -1,24 +1,65 @@
 INCLUDE "hardware.inc"
+INCLUDE "struct/vqueue.inc"
 
 ; What tile to start drawing from
 def rectangle_tiles equ $E0
 def rectangle_tile_top equ rectangle_tiles
 def rectangle_tile_bottom equ rectangle_tiles+2
 
-SECTION "RECTANGLE DRAWER NEW", ROM0
+SECTION "RECTANGLE DRAWER", ROM0
 
-; Tileset used by rectangle drawing.
-; Should be placed at tile ID `rectangle_tiles`.
+; Tileset used by rectangle drawing.  
+; Should be placed at tile ID `rectangle_tiles`.  
 ; Lives in ROM0.
-rectangle_tileset::
-db $FF, $FF, $00, $00, $00, $00, $00, $00
-db $00, $00, $00, $00, $00, $00, $00, $00
-db $00, $00, $00, $00, $00, $00, $00, $00
-db $00, $00, $00, $00, $00, $00, $00, $00
-db $80, $80, $80, $80, $80, $80, $80, $80
-db $80, $80, $80, $80, $80, $80, $80, $80
-db $00, $00, $00, $00, $00, $00, $00, $00
-db $00, $00, $00, $00, $00, $00, $00, $00
+rectangle_tileset:
+    db $FF, $FF, $00, $00, $00, $00, $00, $00
+    db $00, $00, $00, $00, $00, $00, $00, $00
+    db $00, $00, $00, $00, $00, $00, $00, $00
+    db $00, $00, $00, $00, $00, $00, $00, $00
+    db $80, $80, $80, $80, $80, $80, $80, $80
+    db $80, $80, $80, $80, $80, $80, $80, $80
+    db $00, $00, $00, $00, $00, $00, $00, $00
+    db $00, $00, $00, $00, $00, $00, $00, $00
+.end
+
+
+
+; Tileset used by rectangle estimate drawer.  
+; Lives in ROM0.
+rectangle_points_tileset:
+    db $80, $C0, $C0, $40, $00, $00, $00, $00
+    db $00, $00, $00, $00, $00, $00, $00, $00
+    db $00, $00, $00, $00, $00, $00, $00, $00
+    db $00, $00, $00, $00, $00, $00, $00, $00
+.end
+
+
+
+; Loads tile (singular) required for rectangle point shenanigans.  
+; Queues VQUEUE transfer.  
+; Lives in ROM0.
+;
+; Input:
+; - `b`: Destination tile ID
+rectangle_points_load::
+    ld a, b
+    ld [w_sprite_rectangle], a
+
+    ;Get real address pointer -> DE
+    swap a
+    ld b, a
+    and a, %11110000
+    add a, low(_VRAM)
+    ld e, a
+    ld a, b
+    and a, %00001111
+    add a, high(_VRAM)
+    ld d, a
+
+    ;Add VQUEUE transfer
+    vqueue_add_copy VQUEUE_TYPE_DIRECT, de, rectangle_points_tileset
+    ret
+;
 
 
 
@@ -114,8 +155,8 @@ rectangle_movement::
 
 
 
-; Function to draw a rectangle using sprites.
-; TODO: proper 8/16 support
+; Function to draw a rectangle using sprites.  
+; TODO: proper 8/16 support  
 ; Lives in ROM0.
 ;
 ; Input:
@@ -159,7 +200,7 @@ rectangle_draw::
         ld b, 8
         call sprite_get
         ld b, h
-        ld h, high(w_oam_mirror)
+        ld h, high(w_oam)
         ld l, a
 
         ;Top sprite
@@ -198,7 +239,7 @@ rectangle_draw::
     push af
     call sprite_get
     ld b, h
-    ld h, high(w_oam_mirror)
+    ld h, high(w_oam)
     ld l, a
 
     .loop_hor
@@ -259,7 +300,7 @@ rectangle_draw::
         ld b, 8
         call sprite_get
         ld b, h
-        ld h, high(w_oam_mirror)
+        ld h, high(w_oam)
         ld l, a
 
         ;Left sprite
@@ -298,7 +339,7 @@ rectangle_draw::
     push af
     call sprite_get
     ld b, h
-    ld h, high(w_oam_mirror)
+    ld h, high(w_oam)
     ld l, a
 
     .loop_ver
@@ -331,6 +372,78 @@ rectangle_draw::
         push af
         jr .loop_ver
     ;
+
+    ;Return
+    ret
+;
+
+
+
+; Draw the corners of a rectangle using sprites.  
+; Assumes the required sprite tile(s) are loaded.  
+; Lives in ROM0.
+;
+; Input:
+; - `b`: Leftmost X-position of rectangle
+; - `c`: Topmost Y-position of rectangle
+; - `d`: Rightmost X-position of rectangle
+; - `e`: Lowest Y-position of rectangle
+; - `h`: high byte of OAM mirror pointer
+;
+; Saves: none
+rectangle_points_draw::
+    push bc
+    ld b, 4*4
+    call sprite_get
+    pop bc
+
+    ;Draw top-left
+    ld a, c
+    add a, 16
+    ld c, a
+    ld [hl+], a
+    ld a, b
+    add a, 8
+    ld b, a
+    ld [hl+], a
+    ld a, [w_sprite_rectangle]
+    ld [hl+], a
+    xor a
+    ld [hl+], a
+
+    ;Draw top-right
+    ld a, c
+    ld [hl+], a
+    ld a, d
+    add a, 6
+    ld d, a
+    ld [hl+], a
+    ld a, [w_sprite_rectangle]
+    ld c, a
+    ld [hl+], a
+    xor a
+    ld [hl+], a
+
+    ;Draw bottom-left
+    ld a, e
+    add a, 14
+    ld e, a
+    ld [hl+], a
+    ld a, b
+    ld [hl+], a
+    ld a, c
+    ld [hl+], a
+    xor a
+    ld [hl+], a
+
+    ;Draw bottom-right
+    ld a, e
+    ld [hl+], a
+    ld a, d
+    ld [hl+], a
+    ld a, c
+    ld [hl+], a
+    ld [hl], 0
 
     ;Return
     ret

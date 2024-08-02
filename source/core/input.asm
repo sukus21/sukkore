@@ -2,23 +2,19 @@ INCLUDE "hardware.inc"
 
 SECTION "INPUT", ROM0
 ; Gets the current buttons pressed.
-; Bits 0-3 = buttons, bits 4-7 = dpad.
+; Bits 0-3 = buttons, bits 4-7 = dpad.  
 ; Lives in ROM0.
 ;
 ; Returns:
 ; - `b`: Byte of buttons held
 ; - `c`: Byte of buttons pressed
 ;
-; Saves: `e`, `hl`
-; Destroys: `af`, `bc`, `d`
+; Saves: `de`, `hl`  
+; Destroys: `af`, `bc`
 input::
 
-    ;Previous buttons pressed
-    ldh a, [h_input]
-    ld d, a
-    ld c, low(rP1)
-
     ;Set up for reading the buttons
+    ld c, low(rP1)
     ld a, P1F_GET_BTN
     ldh [c], a
     ldh [c], a
@@ -55,15 +51,16 @@ input::
     swap a
     or a, b
     cpl
-    ld b, a
 
     ;Get buttons pressed
-    ldh [h_input], a
-    ld c, a
-    xor a, d
-    and a, c
-    ld c, a
+    ld b, a
+    ldh a, [h_input]
+    xor a, b
+    and a, b
     ldh [h_input_pressed], a
+    ld c, a
+    ld a, b
+    ldh [h_input], a
 
     ;Reset input register and return
     ld a, $FF

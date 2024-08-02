@@ -1,3 +1,6 @@
+    IF !DEF(MACRO_NUMTOHEX_INC)
+    DEF MACRO_NUMTOHEX_INC EQU 1
+
 ; Converts a number into hexadecimal ASCII.
 ;
 ; Input:
@@ -36,3 +39,5 @@ MACRO num_to_hex
     .num_to_hex2_\@
     ld \2, a
 ENDM
+
+    ENDC

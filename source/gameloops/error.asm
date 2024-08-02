@@ -62,34 +62,49 @@ sine:
 
 
 ;Background tileset
-error_tiles:
-    INCBIN "errorscreen/face.tls"
-    .end
-;
+error_tiles: INCBIN "errorscreen/face.tls"
+.end
 
 ;Sprite tiles
-error_sprites:
-    INCBIN "errorscreen/sprites.tls"
-    .end
-;
+error_sprites: INCBIN "errorscreen/sprites.tls"
+.end
 
 ;Font tiles
-error_font:
-    INCBIN "errorscreen/font.tls"
-    .end
-;
+error_font: INCBIN "errorscreen/font.tls"
+.end
 
 ;Tilemap data
-error_map:
-    INCBIN "errorscreen/tilemap.tlm"
-    .end
-;
+error_map: INCBIN "errorscreen/tilemap.tlm"
+.end
 
 ;Sprite initialization data
 error_spritedata:
-    INCBIN "errorscreen/objdata.bin"
-    .end
-;
+    db $C0, $10, $02, $00,   $C0, $18, $04, $00
+    db $D0, $10, $06, $00,   $D0, $18, $08, $00
+    db $E0, $10, $0A, $00,   $E0, $18, $0C, $00
+    db $F0, $10, $0E, $00,   $F0, $18, $10, $00
+    db $00, $14, $00, $00
+    
+    db $00, $E0, $00, $00,   $00, $E0, $00, $00
+    db $00, $E0, $00, $00,   $00, $E0, $00, $00
+    db $00, $E0, $00, $00,   $00, $E0, $00, $00
+    db $00, $E0, $00, $00
+
+    db $C0, $90, $02, $00,   $C0, $98, $04, $00
+    db $D0, $90, $06, $00,   $D0, $98, $08, $00
+    db $E0, $90, $0A, $00,   $E0, $98, $0C, $00
+    db $F0, $90, $0E, $00,   $F0, $98, $10, $00
+    db $00, $94, $00, $00
+
+    db $00, $E0, $00, $00,   $00, $E0, $00, $00
+    db $00, $E0, $00, $00,   $00, $E0, $00, $00
+    db $00, $E0, $00, $00,   $00, $E0, $00, $00
+    db $00, $E0, $00, $00,   $00, $E0, $00, $00
+    db $00, $E0, $00, $00,   $00, $E0, $00, $00
+    db $00, $E0, $00, $00,   $00, $E0, $00, $00
+    db $00, $E0, $00, $00,   $00, $E0, $00, $00
+    db $00, $E0, $00, $00
+.end
 
 ;Background palette
 error_palette_bg:
@@ -258,7 +273,7 @@ gameloop_error:
     ldh [h_setup], a
 
     ;DMA setup
-    call sprite_setup
+    call dma_init
 
     ;Load face graphics into VRAM
     ld hl, $9000
@@ -327,13 +342,14 @@ gameloop_error:
 
     ;Set sprite data
     ;Saves me time, because I don't want to do it manually
-    ld hl, w_oam_mirror
+    ld hl, w_oam
     ld bc, error_spritedata
     ld de, $A0
     call memcpy
 
     ;Update OAM
-    call h_dma_routine
+    ld a, high(w_oam)
+    call h_dma
 
     ;Prepare
     ld hl, zero+144
@@ -354,8 +370,7 @@ gameloop_error:
 
 
 error_wait:
-    ldh a, [rIF]
-    xor a, 2
+    xor a
     ldh [rIF], a
     halt
     nop
@@ -376,18 +391,17 @@ int_stat:
     sub a, $08
     ld b, a
 
-
-
     ;VBLANK CHECK
     ;Check scanline number
     ldh a, [rLY]
-    cp a, $8F
-    jr z, .vwait
     cp a, $86
-    jp nz, error_wait
-    ldh a, [h_setup]
-    or a, a
-    jp z, error_wait
+    jr nz, :+
+        ldh a, [h_setup]
+        or a, a
+        jr z, error_wait
+    :
+    cp a, $8F
+    jr c, error_wait
 
     ;Show error message
     .vwait
@@ -442,12 +456,15 @@ int_stat:
         ldh [rLCDC], a
     :
 
+    bit PADB_START, c
+    jp nz, setup.partial
+
     ;Save things on the stack
     push hl
 
     ;Decrease all 40 sprites Y-position
     ld b, 40
-    ld hl, w_oam_mirror
+    ld hl, w_oam
     ld de, $0004
     .loop40
         dec [hl]
@@ -460,7 +477,7 @@ int_stat:
     ldh a, [rLCDC]
     ld c, a
     ld b, 9
-    ld hl, w_oam_mirror+16*4+1
+    ld hl, w_oam+16*4+1
     .loop20w
         bit LCDCB_WINON, a
         set 6, [hl]
@@ -472,7 +489,8 @@ int_stat:
         jr nz, .loop20w
 
     ;Run sprite DMA
-    call h_dma_routine
+    ld a, high(w_oam)
+    call h_dma
 
     ;Retrieve sine pointer from stack
     pop hl
@@ -503,7 +521,7 @@ int_stat:
     ;Reenable interupts
     xor a
     ldh [rIF], a
-    ld a, 2
+    ld a, IEF_STAT
     ldh [rIE], a
     jp error_wait
 ;
@@ -665,9 +683,28 @@ error_messages:
     CHARMAP "}", $DD
     CHARMAP "~", $DE
 
+    ; Create error message, with correct signature.
+    ; Expands to a `db` command.
+    ;
+    ; Input:
+    ; - `1`: Error message string
+    MACRO create_message
+        db $FF, $00, \1, $00
+    ENDM
+
     ;Strings containing error messages
     error_strings:
-    error_entityoverflow::  db $FF, $00, "ENTITY OVERFLOW", $00
-    error_color_required::  db $FF, $00, "ONLY PLAYS ON CGB", $00
+    error_entityoverflow::  create_message "ENTITY OVERFLOW"
+    error_color_required::  create_message "ONLY PLAYS ON CGB"
+    error_vqueueoverflow::  create_message "VQUEUE OVERFLOW"
+    error_invplayerstate::  create_message "INVLD PLAYER STATE"
+    error_invst_knightln::  create_message "INVLD KNIGHTLN STATE"
+    error_invst_pjamaman::  create_message "INVLD PJAMAMAN STATE"
+    error_invst_citizen::   create_message "INVLD CITIZEN STATE"
+    error_unknwn_equipmt::  create_message "UNKNOWN EQUIPMENT"
+    error_unknown_weapon::  create_message "UNKNOWN WEAPON"
+    error_not_enogh_vram::  create_message "NOT ENOUGH VRAM"
+    error_gameover::        create_message "     GAME  OVER"
+    error_thanksforplay::   create_message "THANKS FOR PLAYING"
     POPC
 ;

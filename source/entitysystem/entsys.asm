@@ -1,13 +1,18 @@
 INCLUDE "hardware.inc"
+INCLUDE "entsys.inc"
 
 SECTION "ENTSYS", ROM0
 
-; Execution code prototyping.
-; Passes entity pointer in DE to step functions.
+; Execute code for all active entities.  
+; Passes entity pointer in DE to step functions.  
 ; Lives in ROM0.
 ; 
 ; Destroys: all
 entsys_step::
+    push af
+    ld [w_entsys_exit], sp
+    pop af
+
     ld hl, w_entsys
     .loop
 
@@ -28,6 +33,7 @@ entsys_step::
             ld h, [hl]
             ld l, a
             call _hl_
+            .exited
             pop hl
         ;
 
@@ -606,4 +612,108 @@ entsys_find_free:
         ld hl, $0000
         ret
     ;
+;
+
+
+
+; Clears the entire entity system.  
+; Lives in ROM0.
+;
+; Saves: `de`
+entsys_clear::
+    ;Initialize entity system
+    ld hl, w_entsys
+    xor a
+    ld b, ENTSYS_CHUNK_COUNT
+    .entsys_loop
+        ld [hl+], a     ;entity bank
+        ld [hl], $40    ;slot size
+        inc l
+        ld [hl+], a     ;step function pointer, low
+        ld [hl+], a     ;step function pointer, high
+        REPT 12
+            ld [hl+], a ;unassigned data
+        ENDR
+        dec b
+        jr nz, .entsys_loop
+    ;
+
+    ;Set first-pointers
+    ld hl, w_entsys_first16
+    xor a
+    ld [hl+], a
+    ld [hl+], a
+    ld [hl+], a
+    ld [hl+], a
+    ld a, low(w_entsys)
+    ld [hl+], a
+    ld a, high(w_entsys)
+    ld [hl+], a
+
+    ;Return
+    ret
+;
+
+
+
+; This entity is destroyed, stop executing its code.  
+; Does not return.  
+; Lives in ROM0.
+entsys_exit::
+    
+    ;Restore stack position
+    ld hl, w_entsys_exit
+    ld a, [hl+]
+    ld h, [hl]
+    ld l, a
+    ld sp, hl
+
+    ;Jump back to entity loop
+    jp entsys_step.exited
+;
+
+
+
+; Check if a (collision enabled) entity is out of bounds.  
+; Lives in ROM0.
+;
+; Input:
+; - `hl`: Entity pointer (0)
+;
+; Returns:
+; - `fZ`: OOB or not (z = no, nz = yes)
+;
+; Saves: `hl`
+entsys_oob::
+    ld e, l
+    relpointer_init l
+    relpointer_move ENTVAR_XPOS+1
+    ld a, [w_camera_xpos+1]
+    cpl
+    add a, [hl]
+    cp a, 160
+    jr c, .checky
+
+    ;Getting warmer
+    cp a, 240
+    jr nc, .checky
+
+    ;Yup, destroy this one
+    .destroy
+    ld l, e
+    or a, h
+    ret
+
+    ;Check Y-position
+    .checky
+    relpointer_move ENTVAR_YPOS+1
+    ld a, [hl]
+    cp a, 160
+    jr nc, .destroy
+
+    ;Nah, we good
+    relpointer_destroy
+    ld l, e
+    xor a
+    ret
 ;

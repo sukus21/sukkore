@@ -1,13 +1,12 @@
 SECTION "RNG", ROM0
 
-; RNG routine. Produces one output. 
-; More or less copied from SMW lol.
+; RNG routine. Produces one output.  
 ; Lives in ROM0.
 ; 
 ; Returns:
 ; - `a`: Random value
 ;
-; Destroys: `f`
+; Destroys: `f`  
 ; Saves: `bc`, `de`, `hl`
 rng_run_single::
     push hl
@@ -23,15 +22,13 @@ rng_run_single::
 
 
 
-; RNG routine. Produces 2 outputs.
-; More or less copied from SMW lol.
+; RNG routine. Produces 2 outputs.  
 ; Lives in ROM0.
 ; 
 ; Returns:
 ; - `de`: Random values
-; - `a`: Mirror of `d`
 ;
-; Destroys: `f`
+; Destroys: `af`  
 ; Saves: `bc`, `d`, `hl`
 rng_run::
     push hl
@@ -55,7 +52,7 @@ rng_run::
 
 
 
-; Subroutine for RNG.
+; RNG subroutine.  
 ; Lives in ROM0.
 ;
 ; Input:
