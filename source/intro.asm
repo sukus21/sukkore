@@ -30,10 +30,10 @@ intro_tileset:
 
 
 ;Color pointer offsets
-_intro_yellow equ $00
-_intro_red equ $40
-_intro_gray equ $80
-_intro_black equ $C0
+DEF _intro_yellow equ $00
+DEF _intro_red equ $40
+DEF _intro_gray equ $80
+DEF _intro_black equ $C0
 
 
 
@@ -51,7 +51,8 @@ intro::
     ldh [rIF], a
     ld a, IEF_VBLANK
     ldh [rIE], a
-    halt 
+    halt
+    nop
 
     ;There is Vblank!
     ;Disable LCD
@@ -156,7 +157,8 @@ intro::
     ldh [rIF], a
     ld a, IEF_VBLANK
     ldh [rIE], a
-    halt 
+    halt
+    nop
     jr .fade
 
 
@@ -166,7 +168,8 @@ intro::
     ldh [rIF], a
     ld a, IEF_VBLANK
     ldh [rIE], a
-    halt 
+    halt
+    nop
 
     ;Now in Vblank, count down
     ld a, %11100100
@@ -186,7 +189,8 @@ intro::
     ldh [rIF], a
     ld a, IEF_VBLANK
     ldh [rIE], a
-    halt 
+    halt
+    nop
 
     ;Fade out
     ld hl, w_intro_timer
@@ -206,6 +210,7 @@ intro::
     ld a, IEF_VBLANK
     ldh [rIE], a
     halt
+    nop
 
     ;Resume whatever was happening
     ret 

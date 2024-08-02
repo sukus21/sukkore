@@ -74,6 +74,7 @@ gameloop_test::
     ld a, LCDCF_ON | LCDCF_OBJON | LCDCF_BGON | LCDCF_BLK01
     ldh [rLCDC], a
     halt
+    nop
 
     ;Main loop
     .loop
@@ -333,7 +334,8 @@ gameloop_test::
     call sprite_finish
     xor a
     ldh [rIF], a
-    halt 
+    halt
+    nop
 
     ;Copy entity status to tilemap
     ld hl, _SCRN0

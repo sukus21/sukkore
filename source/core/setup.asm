@@ -56,7 +56,8 @@ setup::
     ldh [rIF], a
     ld a, IEF_VBLANK
     ldh [rIE], a
-    halt 
+    halt
+    nop
 
     ;Disable LCD
     ld hl, rLCDC

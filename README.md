@@ -7,7 +7,7 @@ This code is meant to be cloned and modified to the needs of any project.
 If you do decide to use it, credit would be appreciated, but is not required.
 
 ### Tools used:
-- [RGBDS toolchain](https://rgbds.gbdev.io) (v0.6.1)
+- [RGBDS toolchain](https://rgbds.gbdev.io) (v0.8.0)
 - [hardware.inc](https://github.com/gbdev/hardware.inc)
 - [Visual Studio Code](https://code.visualstudio.com/)
 - [Emulicious](https://emulicious.net/) + [Debug Adapter for VScode](https://marketplace.visualstudio.com/items?itemName=emulicious.emulicious-debugger)
@@ -15,5 +15,5 @@ If you do decide to use it, credit would be appreciated, but is not required.
 
 ## Building:
 Assumes that `rgbasm`, `rgblink` and `rgbfix` are available in your `path` variable.
-The project is developed using v0.6.1, but other versions may work as well.
+The project is developed using v0.8.0, but anything >= v0.7.0 should work.
 To build the project, run the `build.py` python file, and a file named `build.gb` will appear inside the `build` directory.
