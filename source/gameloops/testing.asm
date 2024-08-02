@@ -1,6 +1,7 @@
 INCLUDE "hardware.inc"
 INCLUDE "macros/memcpy.inc"
 INCLUDE "macros/numtohex.inc"
+INCLUDE "struct/vqueue.inc"
 
 SECTION "TESTLOOP DATA", ROMX
 
@@ -16,6 +17,11 @@ testloop_str:
     .f16 db " 16:$"
 ;
 
+testloop_transfers:
+    vqueue_prepare_set VQUEUE_TYPE_DIRECT, 128, _SCRN0, 0
+    vqueue_prepare_copy VQUEUE_TYPE_DIRECT, _VRAM8000, testloop_font
+;
+
 SECTION "GAMELOOP TEST", ROM0
 
 ; Does not return.
@@ -23,26 +29,10 @@ SECTION "GAMELOOP TEST", ROM0
 ; or after resetting the stack.
 ; Lives in ROM0.
 gameloop_test::
-    ld hl, sp+0
-    ld sp, _SCRN0 + $0800
-    ld bc, $0000
-    ld d, b
-
-    ;Clear tilemaps
-    .clear_tilemap
-    push bc
-    push bc
-    push bc
-    push bc
-    dec d
-    jr nz, .clear_tilemap
-    ld sp, hl
-
-    ;Load tile font
-    ld bc, testloop_font
-    ld de, testloop_font.end - testloop_font
-    ld hl, _VRAM8000
-    call memcpy
+    ld de, testloop_transfers
+    ld b, 2
+    call vqueue_enqueue_multi
+    call gameloop_loading
 
     ;Set palette
     ld a, %11100100
