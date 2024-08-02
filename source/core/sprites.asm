@@ -1,4 +1,4 @@
-INCLUDE "hardware.inc"
+INCLUDE "hardware.inc/hardware.inc"
 INCLUDE "struct/oam_mirror.inc"
 
 SECTION "SPRITES", ROM0

@@ -1,7 +1,7 @@
     IF !DEF(STRUCT_VRAM_ENTSYS_TEST_INC)
     DEF STRUCT_VRAM_ENTSYS_TEST_INC EQU 1
 
-INCLUDE "hardware.inc"
+INCLUDE "hardware.inc/hardware.inc"
 INCLUDE "macros/tilemap.inc"
 
 ;Block 0 (sprites only)

@@ -1,4 +1,4 @@
-INCLUDE "hardware.inc"
+INCLUDE "hardware.inc/hardware.inc"
 INCLUDE "macros/color.inc"
 
 SECTION "ERROR SCREEN VECTOR", ROM0[$0038]
