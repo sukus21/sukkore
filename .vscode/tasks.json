@@ -7,10 +7,30 @@
             "label": "build",
             "detail": "build ROM",
             "type": "shell",
-            "command": "make",
+            "command": "python",
+            "args": [
+                "build.py"
+            ],
             "presentation": {
                 "clear": true,
-                "panel": "dedicated"
+                "panel": "dedicated",
+            },
+            "problemMatcher": [
+                "$rgbdserror",
+                "$rgbdslinkerror"
+            ]
+        },
+        {
+            "label": "rebuild",
+            "detail": "rebuild ROM from scratch",
+            "command": "python",
+            "args": [
+                "build.py",
+                "--rebuild"
+            ],
+            "presentation": {
+                "clear": true,
+                "panel": "dedicated",
             },
             "problemMatcher": [
                 "$rgbdserror",
@@ -19,59 +39,15 @@
         },
         {
             "label": "clean",
-            "detail": "clean build directory",
+            "detail": "cleans up build dir",
             "type": "shell",
-            "command": "make clean",
-            "presentation": {
-                "clear": true,
-                "panel": "dedicated"
-            }
-        },
-        {
-            "label": "build clean",
-            "detail": "rebuild ROM from scratch",
-            "dependsOrder": "sequence",
-            "dependsOn": ["clean", "build"],
+            "command": "python",
+            "args": [
+                "clean.py"
+            ],
             "presentation": {
                 "clear": true,
                 "panel": "dedicated",
-                "reveal": "never"
-            },
-        },
-        {
-            "label": "run",
-            "detail": "build, then launch with default emulator",
-            "type": "shell",
-            "command": "build/build.gb",
-            "dependsOn": ["build"],
-            "presentation": {
-                "clear": true,
-                "panel": "dedicated",
-                "reveal": "never"
-            },
-        },
-        {
-            "label": "re-run",
-            "detail": "re-runs default emulator without building",
-            "type": "shell",
-            "command": "build/build.gb",
-            "problemMatcher": [],
-            "presentation": {
-                "clear": true,
-                "panel": "dedicated",
-                "reveal": "never"
-            },
-        },
-        {
-            "label": "run clean",
-            "detail": "do a clean build, open with default emulator",
-            "dependsOrder": "sequence",
-            "dependsOn": ["clean", "build", "run"],
-            "problemMatcher": [],
-            "presentation": {
-                "clear": true,
-                "panel": "dedicated",
-                "reveal": "never"
             },
         }
     ]
