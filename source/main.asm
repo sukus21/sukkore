@@ -1,4 +1,4 @@
-INCLUDE "hardware.inc"
+INCLUDE "hardware.inc/hardware.inc"
 
 
 SECTION "NOTICE", ROM0[$0000]

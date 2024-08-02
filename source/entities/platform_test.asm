@@ -1,4 +1,4 @@
-INCLUDE "hardware.inc"
+INCLUDE "hardware.inc/hardware.inc"
 INCLUDE "entsys.inc"
 INCLUDE "struct/vqueue.inc"
 
