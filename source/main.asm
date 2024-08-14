@@ -23,7 +23,7 @@ entrypoint:
 
 
 
-SECTION "VBLANK INTERRUPT", ROM0[$0040]
+SECTION "VBLANK INTERRUPT", ROM0[INT_HANDLER_VBLANK]
 
 ; Vblank interrupt vector.
 ; Does nothing, as this is not how I detect Vblank.
@@ -35,7 +35,7 @@ v_vblank::
 
 
 
-SECTION "STAT INTERRUPT", ROM0[$0048]
+SECTION "STAT INTERRUPT", ROM0[INT_HANDLER_STAT]
 
 ; Stat interrupt vector.
 ; Always assumed to be triggered by LY=LYC.
@@ -57,7 +57,7 @@ meta_build_time_utc:: db __ISO_8601_UTC__
 
 
 
-SECTION "MAIN", ROM0[$0150]
+SECTION "MAIN", ROM0
 
 ; Entrypoint of game code, jumped to after setup is complete.
 ; LCD is off at this point.  
