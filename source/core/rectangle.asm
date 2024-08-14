@@ -2,14 +2,14 @@ INCLUDE "hardware.inc/hardware.inc"
 INCLUDE "struct/vqueue.inc"
 
 ; What tile to start drawing from
-def rectangle_tiles equ $E0
-def rectangle_tile_top equ rectangle_tiles
-def rectangle_tile_bottom equ rectangle_tiles+2
+DEF RECTANGLE_TILES EQU $E0
+DEF RECTANGLE_TILE_TOP EQU RECTANGLE_TILES
+DEF RECTANGLE_TILE_BOTTOM EQU RECTANGLE_TILES+2
 
 SECTION "RECTANGLE DRAWER", ROM0
 
 ; Tileset used by rectangle drawing.  
-; Should be placed at tile ID `rectangle_tiles`.  
+; Should be placed at tile ID `RECTANGLE_TILES`.  
 ; Lives in ROM0.
 rectangle_tileset:
     db $FF, $FF, $00, $00, $00, $00, $00, $00
@@ -68,7 +68,7 @@ rectangle_points_load::
 ; Overwrites VRAM tiles.
 ; Lives in ROM0.
 rectangle_load::
-    ld hl, _VRAM + rectangle_tiles * 16
+    ld hl, _VRAM + RECTANGLE_TILES * 16
     ld bc, rectangle_tileset
     ld d, 4*16
     jp memcpy_short
@@ -208,7 +208,7 @@ rectangle_draw::
         ld [hl+], a
         ld a, b
         ld [hl+], a
-        ld a, rectangle_tiles
+        ld a, RECTANGLE_TILES
         ld [hl+], a
         xor a
         ld [hl+], a
@@ -218,7 +218,7 @@ rectangle_draw::
         ld [hl+], a
         ld a, b
         ld [hl+], a
-        ld a, rectangle_tiles
+        ld a, RECTANGLE_TILES
         ld [hl+], a
         xor a
         ld [hl+], a
@@ -248,7 +248,7 @@ rectangle_draw::
         ld [hl+], a
         ld a, b
         ld [hl+], a
-        ld a, rectangle_tiles
+        ld a, RECTANGLE_TILES
         ld [hl+], a
         xor a
         ld [hl+], a
@@ -260,7 +260,7 @@ rectangle_draw::
         ld [hl+], a
         add a, 8
         ld b, a
-        ld a, rectangle_tiles
+        ld a, RECTANGLE_TILES
         ld [hl+], a
         xor a
         ld [hl+], a
@@ -308,7 +308,7 @@ rectangle_draw::
         ld [hl+], a
         ld a, b
         ld [hl+], a
-        ld a, rectangle_tiles+2
+        ld a, RECTANGLE_TILES+2
         ld [hl+], a
         xor a
         ld [hl+], a
@@ -318,7 +318,7 @@ rectangle_draw::
         ld [hl+], a
         ld a, d
         ld [hl+], a
-        ld a, rectangle_tiles+2
+        ld a, RECTANGLE_TILES+2
         ld [hl+], a
         xor a
         ld [hl+], a
@@ -348,7 +348,7 @@ rectangle_draw::
         ld [hl+], a
         ld a, b
         ld [hl+], a
-        ld a, rectangle_tiles+2
+        ld a, RECTANGLE_TILES+2
         ld [hl+], a
         xor a
         ld [hl+], a
@@ -360,7 +360,7 @@ rectangle_draw::
         ld c, a
         ld a, d
         ld [hl+], a
-        ld a, rectangle_tiles+2
+        ld a, RECTANGLE_TILES+2
         ld [hl+], a
         xor a
         ld [hl+], a
