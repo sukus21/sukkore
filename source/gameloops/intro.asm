@@ -1,6 +1,6 @@
 INCLUDE "hardware.inc/hardware.inc"
-INCLUDE "macros/color.inc"
-INCLUDE "macros/memcpy.inc"
+INCLUDE "macro/color.inc"
+INCLUDE "macro/memcpy.inc"
 
 SECTION "INTRO", ROMX, ALIGN[8]
 

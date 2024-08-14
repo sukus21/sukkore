@@ -1,5 +1,5 @@
 INCLUDE "hardware.inc/hardware.inc"
-INCLUDE "macros/color.inc"
+INCLUDE "macro/color.inc"
 
 SECTION "GAMELOOP LOADING", ROM0
 

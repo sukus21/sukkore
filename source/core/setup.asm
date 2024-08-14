@@ -1,6 +1,6 @@
 INCLUDE "hardware.inc/hardware.inc"
-INCLUDE "macros/color.inc"
-INCLUDE "macros/farcall.inc"
+INCLUDE "macro/color.inc"
+INCLUDE "macro/farcall.inc"
 
 SECTION "SETUP", ROM0
 

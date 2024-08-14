@@ -1,6 +1,6 @@
 INCLUDE "hardware.inc/hardware.inc"
 INCLUDE "entsys.inc"
-INCLUDE "macros/color.inc"
+INCLUDE "macro/color.inc"
 INCLUDE "struct/oam_mirror.inc"
 INCLUDE "struct/vqueue.inc"
 

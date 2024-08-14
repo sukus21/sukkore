@@ -1,7 +1,7 @@
     IF !DEF(ENTSYS_INC)
     DEF ENTSYS_INC EQU 1
 
-INCLUDE "macros/relpointer.inc"
+INCLUDE "macro/relpointer.inc"
 
 ; Number of entity chunks available
 ; Assumed to be a multiple of 16.

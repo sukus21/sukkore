@@ -2,7 +2,7 @@
     DEF STRUCT_VRAM_ENTSYS_TEST_INC EQU 1
 
 INCLUDE "hardware.inc/hardware.inc"
-INCLUDE "macros/tilemap.inc"
+INCLUDE "macro/tilemap.inc"
 
 ;Block 0 (sprites only)
 RSSET $00

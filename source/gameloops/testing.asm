@@ -1,6 +1,6 @@
 INCLUDE "hardware.inc/hardware.inc"
-INCLUDE "macros/memcpy.inc"
-INCLUDE "macros/numtohex.inc"
+INCLUDE "macro/memcpy.inc"
+INCLUDE "macro/numtohex.inc"
 INCLUDE "struct/vqueue.inc"
 
 SECTION "TESTLOOP DATA", ROMX

@@ -1,6 +1,6 @@
 INCLUDE "hardware.inc/hardware.inc"
 INCLUDE "struct/vqueue.inc"
-INCLUDE "macros/memcpy.inc"
+INCLUDE "macro/memcpy.inc"
 
 ; If this scanline has been reached, do not perform any more transfer operations.
 DEF VQUEUE_ITERATION_TIME EQU $97

@@ -854,7 +854,7 @@ bcd2bin::
 
 
 ; Call anything from anywhere.  
-; Use with `farcall_x` macro in `macros/farcall.inc`.  
+; Use with `farcall_x` macro in `macro/farcall.inc`.  
 ; Lives in ROM0.
 ;
 ; Input:
