@@ -83,15 +83,6 @@ var_w0:
         ; Only used in `source/intro.asm`.
         w_intro_timer:: db $00
 
-        ; First known 1-chunk entity slot.
-        w_entsys_first16:: dw $0000
-
-        ; First known 2-chunk entity slot.
-        w_entsys_first32:: dw $0000
-
-        ; First known 4-chunk entity slot.
-        w_entsys_first64:: dw w_entsys
-
         ; Stack-position to exit an entity's gameloop.
         w_entsys_exit:: dw $0000
 
@@ -230,6 +221,10 @@ SECTION "WRAMX UNINITIALIZED", WRAMX, ALIGN[8]
         ENDR
         PURGE entity_current
     w_entsys_end::
+
+    ; Entity system allocation status.
+    ; Each bit corresponds to one chunk.
+    w_entsys_clusters:: ds ENTSYS_CLUSTER_COUNT
 
     ; Paint buffer.
     w_paint:: ds $400

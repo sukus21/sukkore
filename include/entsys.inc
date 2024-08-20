@@ -7,6 +7,9 @@ INCLUDE "macro/relpointer.inc"
 ; Assumed to be a multiple of 16.
 DEF ENTSYS_CHUNK_COUNT EQU 64
 
+; Number of clusters in entity system.
+; Each cluster is 8 chunks, one for each bit.
+DEF ENTSYS_CLUSTER_COUNT EQU ENTSYS_CHUNK_COUNT >> 3
 
 RSRESET
 

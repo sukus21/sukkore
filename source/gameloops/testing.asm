@@ -8,13 +8,12 @@ SECTION "TESTLOOP DATA", ROMX
 testloop_font:
     INCBIN "font.tls"
     INCBIN "testing_entityslots.tls"
-    .end
-;
+.end
 
 testloop_str:
-    .f64 db " 64:$"
-    .f32 db " 32:$"
-    .f16 db " 16:$"
+    .f64 db " 64:$    "
+    .f32 db " 32:$    "
+    .f16 db " 16:$    "
 ;
 
 testloop_transfers:
@@ -215,14 +214,14 @@ gameloop_test::
     .entity_loop
         ;Is slot enabled?
         ld a, [hl+]
-        ld b, $83
+        ld b, $85
         or a, a
-        jr z, :+
-            ld b, $80
-        :
+        ld c, 1
+        ld a, [hl-]
+        jr z, .entity_inner
 
         ;Get size of slot
-        ld a, [hl-]
+        ld b, $80
         swap a
         and a, %00000111
         ld c, a
@@ -248,56 +247,16 @@ gameloop_test::
         ;
         
         ;OOB check
-        cp a, $D4
+        cp a, high(w_entsys_end)
         jr nz, .entity_loop
     ;
 
     ;Copy status for first64
     ld h, d
     ld l, e
-    ld de, testloop_str.f64
-    ld b, 5
+    ld de, testloop_str
+    ld b, 9*3
     memcpy_custom hl, de, b
-    num_to_hex [w_entsys_first64+1], b, c
-    ld a, b
-    ld [hl+], a
-    ld a, c
-    ld [hl+], a
-    num_to_hex [w_entsys_first64], b, c
-    ld a, b
-    ld [hl+], a
-    ld a, c
-    ld [hl+], a
-
-    ;Copy status for first32
-    ld b, 5
-    ;ld de, testloop_str.f32 ;It's already there
-    memcpy_custom hl, de, b
-    num_to_hex [w_entsys_first32+1], b, c
-    ld a, b
-    ld [hl+], a
-    ld a, c
-    ld [hl+], a
-    num_to_hex [w_entsys_first32], b, c
-    ld a, b
-    ld [hl+], a
-    ld a, c
-    ld [hl+], a
-
-    ;Copy status for first16
-    ld b, 5
-    ;ld de, testloop_str.f16 ;It's already there
-    memcpy_custom hl, de, b
-    num_to_hex [w_entsys_first16+1], b, c
-    ld a, b
-    ld [hl+], a
-    ld a, c
-    ld [hl+], a
-    num_to_hex [w_entsys_first16], b, c
-    ld a, b
-    ld [hl+], a
-    ld a, c
-    ld [hl+], a
 
     ;Create sprites for performance metric
     ld a, [w_buffer+131]
