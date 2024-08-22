@@ -2,6 +2,7 @@ INCLUDE "hardware.inc/hardware.inc"
 INCLUDE "macro/memcpy.inc"
 INCLUDE "macro/numtohex.inc"
 INCLUDE "struct/vqueue.inc"
+INCLUDE "struct/vram/entsys_allocation_demo.inc"
 
 SECTION "TESTLOOP DATA", ROMX
 
@@ -17,8 +18,8 @@ testloop_str:
 ;
 
 testloop_transfers:
-    vqueue_prepare_set VQUEUE_TYPE_DIRECT, 128, _SCRN0, 0
-    vqueue_prepare_copy VQUEUE_TYPE_DIRECT, _VRAM8000, testloop_font
+    vqueue_prepare_set VQUEUE_TYPE_DIRECT, 32*32/16, VM_ENTALLOC_CHUNKS, 0
+    vqueue_prepare_copy VQUEUE_TYPE_DIRECT, VT_ENTALLOC_FONT, testloop_font
 ;
 
 SECTION "GAMELOOP TEST", ROM0
@@ -100,7 +101,7 @@ gameloop_test::
     ;Make up an X-position and tile ID
     ld [hl], 47
     inc l
-    ld [hl], $86
+    ld [hl], VTI_ENTALLOC_CURSOR
 
     ;Allocate new entity
     ldh a, [h_input_pressed]
@@ -190,7 +191,7 @@ gameloop_test::
     add a, a
     add a, 24
     ld [hl+], a
-    ld [hl], $86
+    ld [hl], VTI_ENTALLOC_CURSOR
 
     ;Actually free entities
     ldh a, [h_input_pressed]
@@ -214,14 +215,14 @@ gameloop_test::
     .entity_loop
         ;Is slot enabled?
         ld a, [hl+]
-        ld b, $85
+        ld b, VTI_ENTALLOC_CHUNK_FREE + 2
         or a, a
         ld c, 1
         ld a, [hl-]
         jr z, .entity_inner
 
         ;Get size of slot
-        ld b, $80
+        ld b, VTI_ENTALLOC_CHUNK_FULL
         swap a
         and a, %00000111
         ld c, a
@@ -286,7 +287,7 @@ gameloop_test::
     nop
 
     ;Copy entity status to tilemap
-    ld hl, _SCRN0
+    ld hl, VM_ENTALLOC_CHUNKS
     ld de, w_buffer
     .vram_loop
         ld a, [de]
@@ -307,15 +308,15 @@ gameloop_test::
     ;
 
     ld b, 9
-    ld hl, _SCRN0 + 131+32
+    ld hl, VM_ENTALLOC_SIZE_64
     memcpy_custom hl, de, b
 
     ld b, 9
-    ld hl, _SCRN0 + 131+64
+    ld hl, VM_ENTALLOC_SIZE_32
     memcpy_custom hl, de, b
 
     ld b, 9
-    ld hl, _SCRN0 + 131+96
+    ld hl, VM_ENTALLOC_SIZE_16
     memcpy_custom hl, de, b
 
     ;OAM DMA and repeat loop
