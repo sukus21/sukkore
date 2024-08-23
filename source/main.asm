@@ -3,14 +3,14 @@ INCLUDE "hardware.inc/hardware.inc"
 
 SECTION "NOTICE", ROM0[$0000]
 rom_message:
-    db "sukus 2023, version 0.1.1", 0
+    db "sukkore", 0
 ;
 
 
 SECTION "ENTRY POINT", ROM0[$0100]
 
-; Entrypoint of the program.
-; Do not call manually.
+; Entrypoint of the program.  
+; Do not call manually.  
 ; Lives in ROM0.
 entrypoint:
     ;Disable interupts and jump
@@ -26,8 +26,8 @@ entrypoint:
 SECTION "VBLANK INTERRUPT", ROM0[INT_HANDLER_VBLANK]
 
 ; Vblank interrupt vector.
-; Does nothing, as this is not how I detect Vblank.
-; Does NOT set IME when returning.
+; Does nothing, as this is not how I detect Vblank.  
+; Does NOT set IME when returning.  
 ; Lives in ROM0.
 v_vblank::
     ret
@@ -39,10 +39,26 @@ SECTION "STAT INTERRUPT", ROM0[INT_HANDLER_STAT]
 
 ; Stat interrupt vector.
 ; Always assumed to be triggered by LY=LYC.
-; Jumps to the routine at `h_LYC`.
+; Jumps to the routine at `h_LYC`.  
 ; Lives in ROM0.
 v_stat::
     jp h_LYC
+;
+
+
+
+SECTION "TIMER INTERRUPT", ROM0[INT_HANDLER_TIMER]
+
+; Timer interrupt handler.
+; Assumed to only be used for benchmarking.  
+; Lives in ROM0.
+v_timer::
+    push af
+    ldh a, [h_benchmark]
+    inc a
+    ldh [h_benchmark], a
+    pop af
+    reti
 ;
 
 

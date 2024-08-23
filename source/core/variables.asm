@@ -168,9 +168,10 @@ var_h:
         ; LYC interrupt jump-to routine.
         ; Contains a single `jp n16` instruction.
         ; The pointer can be overwritten to whatever you want to jump to.
-        h_LYC::
-            jp v_error
-        ;
+        h_LYC:: jp v_error
+
+        ; When benchmarking, this value is used as the upper 8 bits of the counter.
+        h_benchmark:: db $00
 
         ; Bitfield of buttons held.
         ; Use with `PADB_*` or `PADF_*` from `hardware.inc`.
