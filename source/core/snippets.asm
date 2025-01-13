@@ -678,7 +678,7 @@ detect_gbc::
     ldh [c], a
     ld [hl], e
     ld a, b
-    ld [c], a
+    ldh [c], a
 
     ;Return
     ld a, d

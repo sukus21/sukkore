@@ -236,17 +236,17 @@ gameloop_error:
     ;Copy register view to _SCRN1
     ld hl, $9BFF
     ld de, w_buffer
-    ld bc, "af"
+    ld bc, "a"<<8 | "f"
     call numtoscreen
-    ld bc, "bc"
+    ld bc, "b"<<8 | "c"
     call numtoscreen
-    ld bc, "de"
+    ld bc, "d"<<8 | "e"
     call numtoscreen
-    ld bc, "hl"
+    ld bc, "h"<<8 | "l"
     call numtoscreen
-    ld bc, "sp"
+    ld bc, "s"<<8 | "p"
     call numtoscreen
-    ld bc, "in"
+    ld bc, "i"<<8 | "n"
     call numtoscreen
 
     ;Check old HL value
