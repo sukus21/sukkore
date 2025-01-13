@@ -2,7 +2,17 @@ import os
 import subprocess as cmd
 import sys
 
-dirtyCheck = True 
+dirtyCheck = True
+
+def escapeCli(inArgs):
+    outArgs = []
+    for arg in inArgs:
+        arg = arg.replace("\\", "/") # BAD microsoft >:(
+        if " " not in arg and "\"" not in arg:
+            outArgs.append(arg)
+        else:
+            outArgs.append("\"" + arg.replace("\"", "\\\"") + "\"")
+    return outArgs
 
 def assembleFile(srcPath):
     srcName, srcExt = os.path.splitext(srcPath)
@@ -20,13 +30,9 @@ def assembleFile(srcPath):
 
     # Assemble file
     os.makedirs(os.path.dirname(objPath), exist_ok=True)
-    command = cmd.list2cmdline(["rgbasm", "-p", "255", "-i", "include", "-o", objPath, srcPath])
-    print(command)
-    result = cmd.run(
-        command,
-        stdout=sys.stdout,
-        stderr=sys.stderr,
-    )
+    args = ["rgbasm", "-p", "255", "-i", "include", "-o", objPath, srcPath]
+    print(" ".join(escapeCli(args)))
+    result = cmd.run(args, stdout=sys.stdout, stderr=sys.stderr)
 
     # Mark as error on fail
     return (objPath, result.returncode != 0)
@@ -59,16 +65,16 @@ def build():
 
     # Link objects with rgblink
     output = os.path.join("build", "build")
-    command = cmd.list2cmdline(["rgblink", "-p", "255", "-m", output+".map", "-n", output+".sym", "-o", output+".gb"] + objects)
-    print(command)
-    result = cmd.run(command, stdout=sys.stdout, stderr=sys.stderr)
+    args = ["rgblink", "-p", "255", "-m", output+".map", "-n", output+".sym", "-o", output+".gb"] + objects
+    print(" ".join(escapeCli(args)))
+    result = cmd.run(args, stdout=sys.stdout, stderr=sys.stderr)
     if result.returncode != 0:
         os._exit(1)
 
     # Fix ROM header using rgbfix
-    command = cmd.list2cmdline(["rgbfix", "-v", "-j", "-c", "-p", "255", "-t", "PROJECT", "-m", "MBC1", output+".gb"])
-    print(command)
-    result = cmd.run(command, stdout=sys.stdout, stderr=sys.stderr)
+    args = ["rgbfix", "-v", "-j", "-c", "-p", "255", "-t", "PROJECT", "-m", "MBC1", output+".gb"]
+    print(" ".join(escapeCli(args)))
+    result = cmd.run(args, stdout=sys.stdout, stderr=sys.stderr)
     if result.returncode != 0:
         os._exit(1)
 
