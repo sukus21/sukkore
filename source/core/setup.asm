@@ -6,55 +6,54 @@ SECTION "SETUP", ROM0
 
 ; Supposed to run first thing when the game starts.
 ; Lives in ROM0.
-setup::
+Setup::
     ld sp, w_stack
     call dma_init
 
-    ;Is this GBC hardware?
-    call detect_gbc
+    ; Is this GBC hardware?
+    call DetectCGB
 
-    ;What did we get?
-    ldh [h_is_color], a
+    ; What did we get?
+    ldh [hIsCGB], a
     cp a, 0
-    jr z, .is_DMG
-        
-        ;CGB machine
-        jr .is_CGB
+    jr z, .isDMG
+        ; CGB machine
+        jr .isCGB
 
-    .is_DMG
-        ;DMG machine
-        ;fallthrough
+    .isDMG
+        ; DMG machine
+        ; fallthrough
 
-    .is_CGB
+    .isCGB
 
-    ;Does game require GBC functionality?
+    ; Does game require GBC functionality?
     ld a, [$0143]
     cp a, CART_COMPATIBLE_GBC
     jr nz, :+
 
-        ;Game DOES require GBC functionality
-        ldh a, [h_is_color]
+        ; Game DOES require GBC functionality
+        ldh a, [hIsCGB]
         cp a, 0
         jr nz, :+
-        ld hl, error_color_required
-        rst v_error
+        ld hl, ErrorColorRequired
+        rst vError
     :
 
-    ;Set setup variable to true
+    ; Set setup variable to true
     ld a, 1
-    ldh [h_setup], a
+    ldh [hSetup], a
 
-    ;Do my intro with the logo
+    ; Do my intro with the logo
     xor a
     ldh [rSCX], a
     ldh [rSCY], a
-    farcall intro
+    farcall Intro
 
     ; Skip GBC detection and RNG reset.
     ; Lives in ROM0.
     .partial::
 
-    ;Wait for Vblank
+    ; Wait for Vblank
     di
     xor a
     ldh [rIF], a
@@ -63,21 +62,21 @@ setup::
     halt
     nop
 
-    ;Disable LCD
+    ; Disable LCD
     ld hl, rLCDC
     res LCDCB_ON, [hl]
 
-    ;Reset stack pointer
+    ; Reset stack pointer
     ld sp, w_stack
 
-    ;Check if RNG seed should be saved
-    ldh a, [h_setup]
+    ; Check if RNG seed should be saved
+    ldh a, [hSetup]
     cp a, 0
     push af
-    jr z, .rngskip
+    jr z, .skipRNG
 
-        ;Save RNG values to stack
-        ld hl, h_rng
+        ; Save RNG values to stack
+        ld hl, hRNG
         ld a, [hl+]
         ld b, a
         ld a, [hl+]
@@ -86,24 +85,24 @@ setup::
         ld d, a
         ld e, [hl]
 
-        ;Stack shuffling
+        ; Stack shuffling
         pop af
         push bc
         push de
         push af
-    .rngskip
+    .skipRNG
 
-    ;Setup ALL variables
-    farcall variables_init
+    ; Setup ALL variables
+    farcall VariablesInit
 
-    ;Put RNG seed back maybe
+    ; Put RNG seed back maybe
     pop af
-    jr z, .rngignore
+    jr z, .ignoreRNG
         
-        ;Retrieve RNG values from stack
+        ; Retrieve RNG values from stack
         pop de
         pop bc
-        ld hl, h_rng
+        ld hl, hRNG
         ld a, b
         ld [hl+], a
         ld a, c
@@ -111,8 +110,8 @@ setup::
         ld a, d
         ld [hl+], a
         ld [hl], e
-    .rngignore
+    .ignoreRNG
 
-    ;Jump to main
-    jp main
+    ; Jump to main
+    jp Main
 ;

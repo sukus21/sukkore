@@ -20,7 +20,7 @@ MACRO white_fade
         DEF iteration -= DIV(1.0, 31.0)
     ENDR
     
-    ;Cleanup
+    ; Cleanup
     PURGE iteration
     PURGE red
     PURGE green
@@ -28,7 +28,7 @@ MACRO white_fade
 ENDM
 
 ; Raw palette data.
-intro_palettes:
+IntroPalettes:
     .yellow     white_fade 31, 31,  0
     .red        white_fade 31,  0,  0
     .gray       white_fade 18, 18, 18
@@ -38,16 +38,15 @@ intro_palettes:
 
 ; Tilemap data for logo. 
 ; Contains a DMG- and CGB version.
-intro_tilemap:
+IntroTilemap:
     .cgb INCBIN "intro/sukus_cgb.tlm"
     .dmg INCBIN "intro/sukus_dmg.tlm"
 ;
 
 ; Tileset for logo and font.
-intro_tileset:
+IntroTileset:
     INCBIN "intro/intro.tls"
-    .end
-;
+.end
 
 
 
@@ -57,9 +56,9 @@ intro_tileset:
 ; Assumes LCD is turned on.
 ;
 ; Destroys: all
-intro::
+Intro::
 
-    ;Wait for VBLANK
+    ; Wait for VBLANK
     xor a
     ldh [rIF], a
     ld a, IEF_VBLANK
@@ -67,76 +66,76 @@ intro::
     halt
     nop
 
-    ;There is Vblank!
-    ;Disable LCD
+    ; There is Vblank!
+    ; Disable LCD
     xor a
     ldh [rLCDC], a
 
-    ;Copy font to VRAM
+    ; Copy font to VRAM
     ld hl, _VRAM + $1000
-    ld bc, intro_tileset
-    ld de, intro_tileset.end - intro_tileset
-    call memcpy
+    ld bc, IntroTileset
+    ld de, IntroTileset.end - IntroTileset
+    call Memcpy
 
-    ;Copy tilemap
+    ; Copy tilemap
     xor a
     ldh [rVBK], a
     ld hl, _SCRN0
-    ld bc, intro_tilemap
+    ld bc, IntroTilemap
 
-    ;DMG tilemap?
-    ldh a, [h_is_color]
-    or a, a ;cp a, 0
+    ; DMG tilemap?
+    ldh a, [hIsCGB]
+    or a, a ; cp a, 0
     jr nz, .skip_dmg
-        ld bc, intro_tilemap.dmg
+        ld bc, IntroTilemap.dmg
     .skip_dmg
-    call mapcopy_screen
+    call MapCopyScreen
 
-    ;Check if attributes should be set?
-    ldh a, [h_is_color]
-    or a, a ;cp a, 0
-    jr z, .attrskip
+    ; Check if attributes should be set?
+    ldh a, [hIsCGB]
+    or a, a ; cp a, 0
+    jr z, .skipAttr
 
-        ;Set tile attributes
+        ; Set tile attributes
         ld a, 1
         ldh [rVBK], a 
         ld hl, _SCRN0
         ld b, 1
         ld de, $400
-        call memset
+        call Memset
 
-        ;Make face use palette 0
+        ; Make face use palette 0
         ld hl, _SCRN0 + 6 + (32 * 3)
         ld c, 8
         ld a, 0
         ld de, 24
-        .face_loop
-            ;Set data
+        .faceLoop
+            ; Set data
             REPT 8
                 ld [hl+], a
             ENDR
 
-            ;Jump to next line or break
+            ; Jump to next line or break
             add hl, de
             dec c
-            jr nz, .face_loop
+            jr nz, .faceLoop
         ;
         xor a
         ldh [rVBK], a
-    .attrskip
+    .skipAttr
 
-    ;Reenable LCD
+    ; Reenable LCD
     ld hl, rLCDC
     ld a, LCDCF_ON | LCDCF_BGON
     ld [hl], a
 
-    ;Fade in
+    ; Fade in
     ld b, 0
-    call intro_fadein
+    call IntroFadeIn
 
-    ;Show the still image for a bit
-    .fadenone
-        ;Wait for Vblank
+    ; Show the still image for a bit
+    .fadeNone
+        ; Wait for Vblank
         xor a
         ldh [rIF], a
         ld a, IEF_VBLANK
@@ -144,24 +143,24 @@ intro::
         halt
         nop
 
-        ;Set default palette
+        ; Set default palette
         ld a, %11100100
         ldh [rBGP], a
 
-        ;Count down
-        ld hl, w_intro_timer
+        ; Count down
+        ld hl, wIntroTimer
         dec [hl]
         ld a, $E0
         cp a, [hl]
-        jr nz, .fadenone
+        jr nz, .fadeNone
     ;
 
-    ;Waiting phase is OVER!
-    ;Fade out
+    ; Waiting phase is OVER!
+    ; Fade out
     ld b, 0
-    call intro_fadeout
+    call IntroFadeOut
 
-    ;Wait for Vblank again
+    ; Wait for Vblank again
     xor a
     ldh [rIF], a
     ld a, IEF_VBLANK
@@ -169,7 +168,7 @@ intro::
     halt
     nop
 
-    ;Return
+    ; Return
     ret
 ;
 
@@ -180,26 +179,26 @@ intro::
 ; Modifies palette data.
 ;
 ; Input:
-; - `b.0`: Is GBcompo (1 = yes)
+; - `b.0`: Is gbCompo (1 = yes)
 ;
 ; Destroys: all
-intro_fadein:
-    ;Set intro flags
+IntroFadeIn:
+    ; Set intro flags
     xor a
-    ld [w_intro_timer], a
-    ld [w_intro_state], a
+    ld [wIntroTimer], a
+    ld [wIntroState], a
     ldh [rBGP], a
     ldh [rOBP0], a
 
-    ;Set default DMG palettes
+    ; Set default DMG palettes
     ld a, %11100100
-    ld [w_buffer], a
+    ld [wBuffer], a
     ld a, %10010000
-    ld [w_buffer+1], a
+    ld [wBuffer+1], a
 
-    ;Fade in
-    .fadein
-        ;Wait for Vblank
+    ; Fade in
+    .fadeIn
+        ; Wait for Vblank
         xor a
         ldh [rIF], a
         ld a, IEF_VBLANK
@@ -207,24 +206,24 @@ intro_fadein:
         halt
         nop
 
-        ;Do the fading
-        ld hl, w_intro_timer
+        ; Do the fading
+        ld hl, wIntroTimer
         inc [hl]
         ld a, [hl]
         add a, a
         and a, %00111111
         ld c, a
         push bc
-        call intro_fading
+        call IntroFading
         pop bc
 
-        ;Are we done fading in?
+        ; Are we done fading in?
         ld a, e
         cp a, $3E
-        jr nz, .fadein
+        jr nz, .fadeIn
     ;
 
-    ;Return
+    ; Return
     ret
 ;
 
@@ -235,19 +234,19 @@ intro_fadein:
 ; Modifies palette data.
 ;
 ; Input:
-; - `b.0`: Is GBcompo (1 = yes)
+; - `b.0`: Is gbCompo (1 = yes)
 ;
 ; Destroys: all
-intro_fadeout:
-    ;Set flags
+IntroFadeOut:
+    ; Set flags
     xor a
-    ld [w_intro_timer], a
-    inc a ;ld a, 1
-    ld [w_intro_state], a
+    ld [wIntroTimer], a
+    inc a ; ld a, 1
+    ld [wIntroState], a
 
-    ;Fade colors out
-    .fadeout
-        ;Wait for Vblank (again)
+    ; Fade colors out
+    .fadeOut
+        ; Wait for Vblank (again)
         xor a
         ldh [rIF], a
         ld a, IEF_VBLANK
@@ -255,24 +254,24 @@ intro_fadeout:
         halt
         nop
 
-        ;Fade out
-        ld hl, w_intro_timer
+        ; Fade out
+        ld hl, wIntroTimer
         dec [hl]
         ld a, [hl]
         add a, a
         and a, %00111111
         ld c, a
         push bc
-        call intro_fading
+        call IntroFading
         pop bc
 
-        ;Are we done yet?
+        ; Are we done yet?
         ld a, c
         cp a, $00
-        jr nz, .fadeout
+        jr nz, .fadeOut
     ;
 
-    ;Return
+    ; Return
     ret
 ;
 
@@ -283,34 +282,34 @@ intro_fadeout:
 ; Assumes VRAM access.
 ;
 ; Input:
-; - `b.0`: Is GBcompo (1 = true)
+; - `b.0`: Is gbCompo (1 = true)
 ; - `c`: Opacity
 ;
 ; Saves: `c`
-intro_fading:
+IntroFading:
 
-    ;Check if this is a color machine or not
-    ldh a, [h_is_color]
-    or a, a ;cp a, 0
-    jr nz, .color_real
+    ; Check if this is a color machine or not
+    ldh a, [hIsCGB]
+    or a, a ; cp a, 0
+    jr nz, .isCGB
 
-        ;DMG mode
+        ; DMG mode
         ld a, c
         ld e, c
         and a, %00001111
-        or a, a ;cp a, 0
+        or a, a ; cp a, 0
         ret nz
 
-        ;Set values
+        ; Set values
         ldh a, [rBGP]
         ld d, a
         ldh a, [rOBP0]
         ld e, a
-        ld hl, w_buffer ;stores DMG palette
-        ld a, [w_intro_state]
+        ld hl, wBuffer ; stores DMG palette
+        ld a, [wIntroState]
         cp a, 1
-        jr z, .fadeout
-            ;Fade in BGP
+        jr z, .fadeOut
+            ; Fade in BGP
             ld a, d
             rr [hl]
             rra
@@ -318,7 +317,7 @@ intro_fading:
             rra
             ldh [rBGP], a
 
-            ;Fade in OBP0
+            ; Fade in OBP0
             inc l
             ld a, e
             rr [hl]
@@ -327,94 +326,94 @@ intro_fading:
             rra
             ldh [rOBP0], a
 
-            ;Return
+            ; Return
             ret 
 
-        .fadeout
-            ;Fade out BGP
+        .fadeOut
+            ; Fade out BGP
             sla d
             sla d
             ld a, d
             ldh [rBGP], a
 
-            ;Fade out OBP0
+            ; Fade out OBP0
             sla e
             sla e
             ld a, d
             ldh [rOBP0], a
 
-            ;Return
+            ; Return
             ret
         ;
 
-    ;CGB mode
-    .color_real
+    ; CGB mode
+    .isCGB
         ld a, c
-        ld de, w_buffer
+        ld de, wBuffer
         bit 0, b
-        jr nz, .gbcompo
+        jr nz, .gbCompo
 
-            ;Palette 1, logo
-            ld hl, intro_palettes.yellow
-            call intro_fade_color
-            call intro_fade_color
-            call intro_fade_color
-            call intro_fade_color
+            ; Palette 1, logo
+            ld hl, IntroPalettes.yellow
+            call IntroFadeColor
+            call IntroFadeColor
+            call IntroFadeColor
+            call IntroFadeColor
 
-            ;Palette 2, text
-            ;White, doesn't need to change
+            ; Palette 2, text
+            ; White, doesn't need to change
             ld a, $FF
             ld [de], a
             inc e
             ld [de], a
             inc e
 
-            ld hl, intro_palettes.black
-            call intro_fade_color
-            ld hl, intro_palettes.gray
-            call intro_fade_color
-            call intro_fade_color
+            ld hl, IntroPalettes.black
+            call IntroFadeColor
+            ld hl, IntroPalettes.gray
+            call IntroFadeColor
+            call IntroFadeColor
             
-            ;Copy palettes
-            ld e, c ;save this from being clobbered
-            ld hl, w_buffer
+            ; Copy palettes
+            ld e, c ; save this from being clobbered
+            ld hl, wBuffer
             xor a
-            call palette_copy_bg
-            call palette_copy_bg
+            call PaletteCopyBG
+            call PaletteCopyBG
             xor a
-            ld hl, w_buffer + $08
-            call palette_copy_spr
+            ld hl, wBuffer + $08
+            call PaletteCopyOBJ
 
-            ;Return
+            ; Return
             ld c, e
             ret 
         
-        .gbcompo
-            ;White, no calcs needed
+        .gbCompo
+            ; White, no calcs needed
             ld a, $FF
             ld [de], a
             inc e
             ld [de], a
             inc e
 
-            ;The other colors
-            ld hl, intro_palettes.gray
-            call intro_fade_color
-            ld hl, intro_palettes.darkgray
-            call intro_fade_color
-            ld hl, intro_palettes.black
-            call intro_fade_color
+            ; The other colors
+            ld hl, IntroPalettes.gray
+            call IntroFadeColor
+            ld hl, IntroPalettes.darkgray
+            call IntroFadeColor
+            ld hl, IntroPalettes.black
+            call IntroFadeColor
 
-            ;Apply palettes
+            ; Apply palettes
             ld e, c
-            ld hl, w_buffer
+            ld hl, wBuffer
             xor a
-            call palette_copy_bg
+            call PaletteCopyBG
             xor a
-            ld l, low(w_buffer)
-            call palette_copy_spr
+            ld l, low(wBuffer)
+            call PaletteCopyOBJ
 
-            ;Return
+            ; Return
             ld c, e
             ret
         ;
@@ -432,8 +431,8 @@ intro_fading:
 ; - `hl`: Color fade table
 ;
 ; Saves: `bc`
-intro_fade_color:
-    ;Create proper index
+IntroFadeColor:
+    ; Create proper index
     ld a, c
     add a, l
     ld l, a
@@ -441,7 +440,7 @@ intro_fade_color:
         inc h
     :
 
-    ;Copy data
+    ; Copy data
     ld a, [hl+]
     ld [de], a
     inc e
@@ -449,7 +448,7 @@ intro_fade_color:
     ld [de], a
     inc e
 
-    ;Return
+    ; Return
     ld a, l
     sub a, c
     jr nc, :+
@@ -473,15 +472,15 @@ intro_fade_color:
 ; - `bc`: Source
 ;
 ; Destroys: `de`
-mapcopy_screen::
+MapCopyScreen:
     ld e, 18
 
     .loop
-        ;Copy tilemap to screen, 20 tiles at a time
+        ; Copy tilemap to screen, 20 tiles at a time
         ld d, 20
         memcpy_custom hl, bc, d
 
-        ;Skip data pointer ahead
+        ; Skip data pointer ahead
         ld a, l
         add a, 32 - 20
         jr nc, :+
@@ -489,11 +488,11 @@ mapcopy_screen::
         :
         ld l, a
 
-        ;End of loop
+        ; End of loop
         dec e
         jr nz, .loop
     ;
 
-    ;Return
+    ; Return
     ret
 ;

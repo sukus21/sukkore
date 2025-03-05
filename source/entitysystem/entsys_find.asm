@@ -6,17 +6,17 @@ SECTION "ENTSYS FIND", ROM0
 
 MACRO find
     push bc
-    ld hl, w_entsys
+    ld hl, wEntsys
 
     .check
-        ;Is this entity allocated?
+        ; Is this entity allocated?
         ld a, [hl+]
         or a, a
         ld a, [hl-]
         jr z, .next
         ld b, a
 
-        ;Match all flags
+        ; Match all flags
         set 2, l
         ld a, [hl]
         res 2, l
@@ -31,9 +31,9 @@ MACRO find
             jr z, .next
         ENDC
 
-        ;Ok, we have outselves a match!
+        ; Ok, we have outselves a match!
         pop bc
-        or a, h ;reset Z flag
+        or a, h ; reset Z flag
         ret
     ;
 
@@ -46,34 +46,34 @@ MACRO find
         jr nc, .check
         inc h
         ld a, h
-        cp a, high(w_entsys_end)
+        cp a, high(wEntsys.end)
         jr c, .check
 
-        ;Nope, we are done here
+        ; Nope, we are done here
         pop bc
-        xor a ;set Z flag
+        xor a ; set Z flag
         ret
     ;
 ENDM
 
 MACRO collision
-    call entsys_collision_prepare1
+    call EntsysCollisionPrepare1
 
-    ;Find entity with these flags
+    ; Find entity with these flags
     .prepared::
     call \1
     ret z
 
-    ;Ok, grab rectangle params
+    ; Ok, grab rectangle params
     .collide
     push bc
     push hl
-    call entsys_collision_prepare2
+    call EntsysCollisionPrepare2
 
-    ;Perform collision call
-    call entsys_collision_rr8f
+    ; Perform collision call
+    call EntsysCollisionRR8F
 
-    ;Did we find anything?
+    ; Did we find anything?
     pop hl
     pop bc
     jr z, :+
@@ -96,11 +96,11 @@ ENDM
 ; - `hl`: Entity pointer (`$0000` when none found)
 ;
 ; Saves: `bc`, `de`
-entsys_find_all::
+EntsysFindAll::
     find 1
 
     ; Continue a previous search.
-    ; Documentation from `entsys_find_all` applies.
+    ; Documentation from `EntsysFindAll` applies.
     ; Input entity is not checked.  
     ; Lives in ROM0.
     ;
@@ -112,7 +112,7 @@ entsys_find_all::
     ; - `hl`: Entity pointer (`$0000` when none found)
     ;
     ; Saves: `bc`, `de`
-    entsys_find_all.continue::
+    EntsysFindAll.continue::
     push bc
     inc l
     ld a, [hl-]
@@ -134,11 +134,11 @@ entsys_find_all::
 ; - `hl`: Entity pointer (`$0000` when none found)
 ;
 ; Saves: `bc`, `de`
-entsys_find_any::
+EntsysFindAny::
     find 0
 
     ; Continue a previous search.
-    ; Documentation from `entsys_find_any` applies.
+    ; Documentation from `EntsysFindAny` applies.
     ; Input entity is not checked.  
     ; Lives in ROM0.
     ;
@@ -150,7 +150,7 @@ entsys_find_any::
     ; - `hl`: Entity pointer (`$0000` when none found)
     ;
     ; Saves: `bc`, `de`
-    entsys_find_any.continue::
+    EntsysFindAny.continue::
     push bc
     inc l
     ld a, [hl-]
@@ -173,13 +173,13 @@ entsys_find_any::
 ; - `hl`: Collided entity
 ;
 ; Destroys: all
-entsys_collision_all::
-    collision entsys_find_all
+EntsysCollisionAll::
+    collision EntsysFindAll
 
     ; Low-precision collision check.
     ; Only tests using high-bytes of positions, and only for entities with all supplied flags.
     ; Check more entities if needed.  
-    ; Assumes `h_colbuf` is unchanged.  
+    ; Assumes `hColBuf` is unchanged.  
     ; Lives in ROM0.
     ;
     ; Input:
@@ -192,8 +192,8 @@ entsys_collision_all::
     ;
     ; Saves: `c`  
     ; Destroys: `af`, `b`, `de`
-    entsys_collision_all.continue::
-    call entsys_find_all.continue
+    EntsysCollisionAll.continue::
+    call EntsysFindAll.continue
     jr nz, .collide
     ret
 ;
@@ -214,13 +214,13 @@ entsys_collision_all::
 ; - `hl`: Collided entity
 ;
 ; Destroys: all
-entsys_collision_any::
-    collision entsys_find_any
+EntsysCollisionAny::
+    collision EntsysFindAny
 
     ; Low-precision collision check.
     ; Only tests using high-bytes of positions, and only for entities with any of the supplied flags.
     ; Check more entities if needed.  
-    ; Assumes `h_colbuf` is unchanged.  
+    ; Assumes `hColBuf` is unchanged.  
     ; Lives in ROM0.
     ;
     ; Input:
@@ -233,8 +233,8 @@ entsys_collision_any::
     ;
     ; Saves: `c`  
     ; Destroys: `af`, `b`, `de`
-    entsys_collision_any.continue::
-    call entsys_find_any.continue
+    EntsysCollisionAny.continue::
+    call EntsysFindAny.continue
     jr nz, .collide
     ret
 ;

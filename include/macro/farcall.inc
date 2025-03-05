@@ -41,10 +41,10 @@ ENDM
 MACRO farcall_x
     ASSERT bank(@) != 0, "farcall - should not use farcall_x from ROM0"
     ld a, bank(@)
-    ldh [h_bank_number], a
+    ldh [hBankNumber], a
     ld a, bank(\1)
     ld hl, \1
-    call farcall_handler_x
+    call FarcallHandlerX
 ENDM
 
     ENDC

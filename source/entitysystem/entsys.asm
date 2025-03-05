@@ -8,28 +8,28 @@ SECTION "ENTSYS", ROM0
 ; Lives in ROM0.
 ; 
 ; Destroys: all
-entsys_step::
+EntsysStep::
     push af
-    ld [w_entsys_exit], sp
+    ld [wEntsysExit], sp
     pop af
 
-    ld hl, w_entsys
+    ld hl, wEntsys
     .loop
 
-        ;Is this entity in use or not?
+        ; Is this entity in use or not?
         ld d, h
         ld e, l
-        ld a, [hl+] ;Entity ROM bank
+        ld a, [hl+] ; Entity ROM bank
         or a, a
 
-        ;Entity is not allocated, go to next entity in line
+        ; Entity is not allocated, go to next entity in line
         jr z, .proceed
 
-            ;Entity is in use, apply bank and read pointer
+            ; Entity is in use, apply bank and read pointer
             push hl
             ld [rROMB0], a
             inc hl
-            ld a, [hl+] ;Step function pointer
+            ld a, [hl+] ; Step function pointer
             ld h, [hl]
             ld l, a
             call _hl_
@@ -37,15 +37,15 @@ entsys_step::
             pop hl
         ;
 
-        ;Go to next entity
+        ; Go to next entity
         .proceed
-        ld a, [hl-] ;Distance to next entity -> entity bank ID
+        ld a, [hl-] ; Distance to next entity -> entity bank ID
         add a, l
         ld l, a
         jr nc, .loop
         inc h
         ld a, h
-        cp a, high(w_entsys_end)
+        cp a, high(wEntsys.end)
         jr nz, .loop
         ret
     ;
@@ -61,43 +61,43 @@ entsys_step::
 ; - `bc`: Entity pointer
 ;
 ; Destroys: all
-entsys_new16::
+EntsysNew16::
     ld b, ENTSYS_CLUSTER_COUNT+1
-    ld hl, w_entsys_clusters
+    ld hl, wEntsysClusters
 
-    .cluster_loop
+    .clusterLoop
         dec b
         jr z, .overflow
 
-        ;Read new cluster mask
+        ; Read new cluster mask
         ld a, [hl+]
         ld c, a
 
-        ;Check if chunk is completely occupied
-        inc a ;cp a, $FF
-        jr z, .cluster_loop
+        ; Check if chunk is completely occupied
+        inc a ; cp a, $FF
+        jr z, .clusterLoop
 
-        ;It is not, go through cluster
-        scf ;set carry flag, so first iteration results in d = 1
+        ; It is not, go through cluster
+        scf ; set carry flag, so first iteration results in d = 1
         ld de, $00FF
-        .chunk_loop
-            inc e ;does not change c flag
+        .chunkLoop
+            inc e ; does not change c flag
             rl d
-            jr c, .cluster_loop
+            jr c, .clusterLoop
 
             ld a, d
-            and a, c ;clears c flag for remaining iterations
-            jr nz, .chunk_loop
+            and a, c ; clears c flag for remaining iterations
+            jr nz, .chunkLoop
         ;
     ;
 
-    ;Found entity, mark as occupied in cluster
+    ; Found entity, mark as occupied in cluster
     dec hl
     ld a, d
     or a, [hl]
     ld [hl], a
 
-    ;Get entity ID
+    ; Get entity ID
     ld a, ENTSYS_CLUSTER_COUNT
     sub a, b
     add a, a
@@ -105,29 +105,29 @@ entsys_new16::
     add a, a
     add a, e
 
-    ;Convert ID to pointer
+    ; Convert ID to pointer
     swap a
     ld c, a
     and a, %00001111
-    add a, high(w_entsys)
+    add a, high(wEntsys)
     ld b, a
     ld a, c
     and a, %11110000
     ld c, a
     
-    ;Write size
+    ; Write size
     inc c
     ld a, $10
     ld [bc], a
     dec c
 
-    ;Return
+    ; Return
     ret 
 
-    ;No chunks available
+    ; No chunks available
     .overflow
-        ld hl, error_entityoverflow
-        rst v_error
+        ld hl, ErrorEntityOverflow
+        rst vError
     ;
 ;
 
@@ -141,27 +141,27 @@ entsys_new16::
 ; - `bc`: Entity pointer
 ;
 ; Destroys: all
-entsys_new32::
+EntsysNew32::
     ld b, ENTSYS_CLUSTER_COUNT+1
-    ld hl, w_entsys_clusters
+    ld hl, wEntsysClusters
 
-    .cluster_loop
+    .clusterLoop
         dec b
         jr z, .overflow
 
-        ;Read new cluster mask
+        ; Read new cluster mask
         ld a, [hl+]
         ld c, a
 
-        ;Check if chunk is completely occupied
-        inc a ;cp a, $FF
-        jr z, .cluster_loop
+        ; Check if chunk is completely occupied
+        inc a ; cp a, $FF
+        jr z, .clusterLoop
 
-        ;It is not, go through cluster
+        ; It is not, go through cluster
         ld de, $0300
-        .chunk_loop
+        .chunkLoop
             ld a, d
-            and a, c ;clears c flag for remaining iterations
+            and a, c ; clears c flag for remaining iterations
             jr z, .found
 
             inc e
@@ -169,19 +169,19 @@ entsys_new32::
             rla
             rla
             ld d, a
-            jr nc, .chunk_loop
-            jr .cluster_loop
+            jr nc, .chunkLoop
+            jr .clusterLoop
         ;
     ;
 
-    ;Found entity, mark as occupied in cluster
+    ; Found entity, mark as occupied in cluster
     .found
     dec hl
     ld a, d
     or a, [hl]
     ld [hl], a
 
-    ;Get entity ID
+    ; Get entity ID
     ld a, ENTSYS_CLUSTER_COUNT
     sub a, b
     add a, a
@@ -190,29 +190,29 @@ entsys_new32::
     sla e
     add a, e
 
-    ;Convert ID to pointer
+    ; Convert ID to pointer
     swap a
     ld c, a
     and a, %00001111
-    add a, high(w_entsys)
+    add a, high(wEntsys)
     ld b, a
     ld a, c
     and a, %11110000
     ld c, a
     
-    ;Write size
+    ; Write size
     inc c
     ld a, $20
     ld [bc], a
     dec c
 
-    ;Return
+    ; Return
     ret 
 
-    ;No chunks available
+    ; No chunks available
     .overflow
-        ld hl, error_entityoverflow
-        rst v_error
+        ld hl, ErrorEntityOverflow
+        rst vError
     ;
 ;
 
@@ -226,30 +226,30 @@ entsys_new32::
 ; - `bc`: Entity pointer
 ;
 ; Destroys: all
-entsys_new64::
+EntsysNew64::
     ld bc, (ENTSYS_CLUSTER_COUNT+1) << 8
-    ld hl, w_entsys_clusters
+    ld hl, wEntsysClusters
 
-    .cluster_loop
+    .clusterLoop
         dec b
         jr z, .overflow
 
-        ;Read new cluster mask
+        ; Read new cluster mask
         ld a, [hl+]
         ld d, a
 
-        ;It is not, go through cluster
+        ; It is not, go through cluster
         and a, $0F
         jr z, .found
         ld a, $F0
         and a, d
-        jr nz, .cluster_loop
+        jr nz, .clusterLoop
         ld c, 4
         ld a, $F0
-        or a, a ;unset Z flag
+        or a, a ; unset Z flag
     ;
 
-    ;Found entity, mark as occupied in cluster
+    ; Found entity, mark as occupied in cluster
     .found
     jr nz, :+
         ld a, $0F
@@ -258,7 +258,7 @@ entsys_new64::
     or a, [hl]
     ld [hl], a
 
-    ;Get entity ID
+    ; Get entity ID
     ld a, ENTSYS_CLUSTER_COUNT
     sub a, b
     add a, a
@@ -266,29 +266,29 @@ entsys_new64::
     add a, a
     add a, c
 
-    ;Convert ID to pointer
+    ; Convert ID to pointer
     swap a
     ld c, a
     and a, %00001111
-    add a, high(w_entsys)
+    add a, high(wEntsys)
     ld b, a
     ld a, c
     and a, %11110000
     ld c, a
     
-    ;Write size
+    ; Write size
     inc c
     ld a, $40
     ld [bc], a
     dec c
 
-    ;Return
+    ; Return
     ret 
 
-    ;No chunks available
+    ; No chunks available
     .overflow
-        ld hl, error_entityoverflow
-        rst v_error
+        ld hl, ErrorEntityOverflow
+        rst vError
     ;
 ;
 
@@ -302,8 +302,8 @@ entsys_new64::
 ; - `hl`: Entity slot pointer
 ;
 ; Saves: `de`
-entsys_free::
-    ;Clear bank and get bitmask from size -> B
+EntsysFree::
+    ; Clear bank and get bitmask from size -> B
     xor a
     ld [hl+], a
     ld a, [hl-]
@@ -316,13 +316,13 @@ entsys_free::
         jr nz, .bitmask_loop
     ;
 
-    ;Get entity ID from pointer -> C
+    ; Get entity ID from pointer -> C
     ld a, h
-    sub a, high(w_entsys)
+    sub a, high(wEntsys)
     or a, l
     swap a
 
-    ;Shift bitmask based on ID
+    ; Shift bitmask based on ID
     rrca
     jr nc, :+
         rlc b
@@ -338,8 +338,8 @@ entsys_free::
     :
     and a, %00011111
 
-    ;Mark as available in cluster
-    ld hl, w_entsys_clusters
+    ; Mark as available in cluster
+    ld hl, wEntsysClusters
     add a, l
     ld l, a
     ld a, b
@@ -347,7 +347,7 @@ entsys_free::
     and a, [hl]
     ld [hl], a
 
-    ;That should be it
+    ; That should be it
     ret
 ;
 
@@ -357,29 +357,29 @@ entsys_free::
 ; Lives in ROM0.
 ;
 ; Saves: `de`
-entsys_clear::
-    ;Initialize entity system
-    ld hl, w_entsys
+EntsysClear::
+    ; Initialize entity system
+    ld hl, wEntsys
     xor a
     ld b, ENTSYS_CHUNK_COUNT
-    .entsys_loop
-        ld [hl+], a     ;entity bank
-        ld [hl], $40    ;slot size
+    .entsysLoop
+        ld [hl+], a     ; entity bank
+        ld [hl], $40    ; slot size
         inc l
-        ld [hl+], a     ;step function pointer, low
-        ld [hl+], a     ;step function pointer, high
+        ld [hl+], a     ; step function pointer, low
+        ld [hl+], a     ; step function pointer, high
         REPT 12
-            ld [hl+], a ;unassigned data
+            ld [hl+], a ; unassigned data
         ENDR
         dec b
-        jr nz, .entsys_loop
+        jr nz, .entsysLoop
     ;
 
-    ld hl, w_entsys_clusters
+    ld hl, wEntsysClusters
     ld bc, ENTSYS_CLUSTER_COUNT
-    call memset_short
+    call MemsetShort
 
-    ;Return
+    ; Return
     ret
 ;
 
@@ -388,17 +388,17 @@ entsys_clear::
 ; This entity is destroyed, stop executing its code.  
 ; Does not return.  
 ; Lives in ROM0.
-entsys_exit::
+EntsysExit::
     
-    ;Restore stack position
-    ld hl, w_entsys_exit
+    ; Restore stack position
+    ld hl, wEntsysExit
     ld a, [hl+]
     ld h, [hl]
     ld l, a
     ld sp, hl
 
-    ;Jump back to entity loop
-    jp entsys_step.exited
+    ; Jump back to entity loop
+    jp EntsysStep.exited
 ;
 
 
@@ -413,34 +413,32 @@ entsys_exit::
 ; - `fZ`: OOB or not (z = no, nz = yes)
 ;
 ; Saves: `hl`
-entsys_oob::
+EntsysOOB::
     ld e, l
     relpointer_init l
     relpointer_move ENTVAR_XPOS+1
-    ld a, [w_camera_xpos+1]
-    cpl
-    add a, [hl]
+    ld a, [hl]
     cp a, 160
     jr c, .checky
 
-    ;Getting warmer
+    ; Getting warmer
     cp a, 240
     jr nc, .checky
 
-    ;Yup, destroy this one
+    ; Yup, destroy this one
     .destroy
     ld l, e
     or a, h
     ret
 
-    ;Check Y-position
+    ; Check Y-position
     .checky
     relpointer_move ENTVAR_YPOS+1
     ld a, [hl]
     cp a, 160
     jr nc, .destroy
 
-    ;Nah, we good
+    ; Nah, we good
     relpointer_destroy
     ld l, e
     xor a

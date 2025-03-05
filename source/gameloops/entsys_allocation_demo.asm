@@ -6,20 +6,20 @@ INCLUDE "struct/vram/entsys_allocation_demo.inc"
 
 SECTION "TESTLOOP DATA", ROMX
 
-testloop_font:
+TestloopFont:
     INCBIN "font.tls"
     INCBIN "testing_entityslots.tls"
 .end
 
-testloop_str:
+TestloopStr:
     .f64 db " 64:$    "
     .f32 db " 32:$    "
     .f16 db " 16:$    "
 ;
 
-testloop_transfers:
+TestloopTransfers:
     vqueue_prepare_set VQUEUE_TYPE_DIRECT, 32*32/16, VM_ENTALLOC_CHUNKS, 0
-    vqueue_prepare_copy VQUEUE_TYPE_DIRECT, VT_ENTALLOC_FONT, testloop_font
+    vqueue_prepare_copy VQUEUE_TYPE_DIRECT, VT_ENTALLOC_FONT, TestloopFont
 ;
 
 SECTION "GAMELOOP TEST", ROM0
@@ -28,51 +28,51 @@ SECTION "GAMELOOP TEST", ROM0
 ; Should not be called, but jumped to from another gameloop,
 ; or after resetting the stack.
 ; Lives in ROM0.
-gameloop_test::
-    ld de, testloop_transfers
+GameloopTest::
+    ld de, TestloopTransfers
     ld b, 2
-    call vqueue_enqueue_multi
-    call gameloop_loading
+    call VQueueEnqueueMulti
+    call GameloopLoading
 
-    ;Set palette
+    ; Set palette
     ld a, %11100100
     ldh [rBGP], a
     ldh [rOBP0], a
 
-    ;Set screen position
+    ; Set screen position
     ld a, -16
     ldh [rSCX], a
     ldh [rSCY], a
 
-    ;Initialize a few variables
+    ; Initialize a few variables
     xor a
-    ld hl, w_buffer+128
+    ld hl, wBuffer+128
     ld [hl+], a
     ld [hl+], a
     ld [hl+], a
 
-    ;Clear OAM
-    ld a, high(w_oam)
-    call h_dma
+    ; Clear OAM
+    ld a, high(wOAM)
+    call hDMA
 
-    ;Enable Vblank interrupt
+    ; Enable Vblank interrupt
     xor a
     ldh [rIF], a
     ld a, IEF_VBLANK
     ldh [rIE], a
 
-    ;Enable LCD
+    ; Enable LCD
     ld a, LCDCF_ON | LCDCF_OBJON | LCDCF_BGON | LCDCF_BLK01
     ldh [rLCDC], a
     halt
     nop
 
-    ;Main loop
+    ; Main loop
     .loop
-    call input
+    call ReadInput
 
-    ;Select what allocation mode to do
-    ld hl, w_buffer+130
+    ; Select what allocation mode to do
+    ld hl, wBuffer+130
     ld a, [hl]
     bit PADB_SELECT, c
     jr z, :+
@@ -84,64 +84,64 @@ gameloop_test::
         ld [hl], a
     :
 
-    ;Get sprite Y-position
+    ; Get sprite Y-position
     add a, a
     add a, a
     add a, a
     add a, 71
     ld c, a
 
-    ;Get sprite and apply Y-position
+    ; Get sprite and apply Y-position
     ld b, 4
-    ld h, high(w_oam)
-    call sprite_get
+    ld h, high(wOAM)
+    call SpriteGet
     ld [hl], c
     inc l
 
-    ;Make up an X-position and tile ID
+    ; Make up an X-position and tile ID
     ld [hl], 47
     inc l
     ld [hl], VTI_ENTALLOC_CURSOR
 
-    ;Allocate new entity
-    ldh a, [h_input_pressed]
+    ; Allocate new entity
+    ldh a, [hInputPressed]
     bit PADB_A, a
-    jr z, .no_alloc
+    jr z, .noAlloc
         ld c, 1
-        call wait_scanline
-        ld a, [w_buffer+130]
+        call WaitScanline
+        ld a, [wBuffer+130]
         cp a, 0
         jr nz, :+
-            call entsys_new64
-            jr .alloc_done
+            call EntsysNew64
+            jr .allocDone
         :
         cp a, 1
         jr nz, :+
-            call entsys_new32
-            jr .alloc_done
+            call EntsysNew32
+            jr .allocDone
         :
         cp a, 2
-        jr nz, .no_alloc
-        call entsys_new16
-        ;Falls into `alloc_done`
+        jr nz, .noAlloc
+        call EntsysNew16
+        ; Falls into `allocDone`
 
-        .alloc_done
-        ;Set entity bank to 1
+        .allocDone
+        ; Set entity bank to 1
         ld a, 1
         ld [bc], a
         ldh a, [rLY]
-        ld [w_buffer+131], a
-    .no_alloc
+        ld [wBuffer+131], a
+    .noAlloc
 
-    ;Free entities
-    ldh a, [h_input_pressed]
+    ; Free entities
+    ldh a, [hInputPressed]
     ld b, a
-    ld hl, w_buffer+128
+    ld hl, wBuffer+128
     ld a, [hl+]
-    ld d, a ;x-axis
-    ld e, [hl] ;y-axis
+    ld d, a ; x-axis
+    ld e, [hl] ; y-axis
 
-    ;Move on X-axis
+    ; Move on X-axis
     bit PADB_LEFT, b
     jr z, :+
         dec d
@@ -154,7 +154,7 @@ gameloop_test::
     and a, %00001111
     ld d, a
 
-    ;Move on Y-axis
+    ; Move on Y-axis
     bit PADB_UP, b
     jr z, :+
         dec e
@@ -166,25 +166,25 @@ gameloop_test::
     ld a, e
     and a, %00000011
 
-    ;Save modified values
+    ; Save modified values
     ld [hl-], a
     ld [hl], d
 
-    ;Draw cursor sprite
+    ; Draw cursor sprite
     add a, a
     add a, a
     add a, a
     add a, 28
-    ld c, a ;y-position
+    ld c, a ; y-position
 
-    ;Get sprite
+    ; Get sprite
     ld b, 4
-    ld h, high(w_oam)
-    call sprite_get
+    ld h, high(wOAM)
+    call SpriteGet
     ld [hl], c
     inc l
 
-    ;Make up an X-position and tile ID
+    ; Make up an X-position and tile ID
     ld a, d
     add a, a
     add a, a
@@ -193,35 +193,35 @@ gameloop_test::
     ld [hl+], a
     ld [hl], VTI_ENTALLOC_CURSOR
 
-    ;Actually free entities
-    ldh a, [h_input_pressed]
+    ; Actually free entities
+    ldh a, [hInputPressed]
     bit PADB_B, a
-    jr z, .no_free
+    jr z, .noFree
         ld c, 1
-        call wait_scanline
+        call WaitScanline
         ld l, d
         swap l
-        ld a, high(w_entsys)
+        ld a, high(wEntsys)
         add a, e
         ld h, a
-        call entsys_free
+        call EntsysFree
         ldh a, [rLY]
-        ld [w_buffer+131], a
-    .no_free
+        ld [wBuffer+131], a
+    .noFree
 
-    ;Get quick status of all entities
-    ld hl, w_entsys
-    ld de, w_buffer
-    .entity_loop
-        ;Is slot enabled?
+    ; Get quick status of all entities
+    ld hl, wEntsys
+    ld de, wBuffer
+    .entityLoop
+        ; Is slot enabled?
         ld a, [hl+]
         ld b, VTI_ENTALLOC_CHUNK_FREE + 2
         or a, a
         ld c, 1
         ld a, [hl-]
-        jr z, .entity_inner
+        jr z, .entityInner
 
-        ;Get size of slot
+        ; Get size of slot
         ld b, VTI_ENTALLOC_CHUNK_FULL
         swap a
         and a, %00000111
@@ -230,8 +230,8 @@ gameloop_test::
         add a, b
         ld b, a
 
-        ;Store this and move on to next entity
-        .entity_inner
+        ; Store this and move on to next entity
+        .entityInner
             ld a, b
             ld [de], a
             inc de
@@ -242,29 +242,29 @@ gameloop_test::
             adc a, h
             ld h, a
 
-            ;Multi-slot entity, repeat?
+            ; Multi-slot entity, repeat?
             dec c
-            jr nz, .entity_inner
+            jr nz, .entityInner
         ;
         
-        ;OOB check
-        cp a, high(w_entsys_end)
-        jr nz, .entity_loop
+        ; OOB check
+        cp a, high(wEntsys.end)
+        jr nz, .entityLoop
     ;
 
-    ;Copy status for first64
+    ; Copy status for first64
     ld h, d
     ld l, e
-    ld de, testloop_str
+    ld de, TestloopStr
     ld b, 9*3
     memcpy_custom hl, de, b
 
-    ;Create sprites for performance metric
-    ld a, [w_buffer+131]
+    ; Create sprites for performance metric
+    ld a, [wBuffer+131]
     num_to_hex a, d, e
     ld b, 8
-    ld h, high(w_oam)
-    call sprite_get
+    ld h, high(wOAM)
+    call SpriteGet
     ld [hl], 64
     inc l
     ld [hl], 24
@@ -278,24 +278,24 @@ gameloop_test::
     inc l
     ld [hl], e
 
-    ;Wait for Vblank
-    ld h, high(w_oam)
-    call sprite_finish
+    ; Wait for Vblank
+    ld h, high(wOAM)
+    call SpriteFinish
     xor a
     ldh [rIF], a
     halt
     nop
 
-    ;Copy entity status to tilemap
+    ; Copy entity status to tilemap
     ld hl, VM_ENTALLOC_CHUNKS
-    ld de, w_buffer
-    .vram_loop
+    ld de, wBuffer
+    .vramLoop
         ld a, [de]
         inc de
         ld [hl+], a
         ld a, e
         and a, %00001111
-        jr nz, .vram_loop
+        jr nz, .vramLoop
 
         ld a, l
         or a, %00011111
@@ -304,7 +304,7 @@ gameloop_test::
         
         ld a, e
         cp a, $40
-        jr nz, .vram_loop
+        jr nz, .vramLoop
     ;
 
     ld b, 9
@@ -319,8 +319,8 @@ gameloop_test::
     ld hl, VM_ENTALLOC_SIZE_16
     memcpy_custom hl, de, b
 
-    ;OAM DMA and repeat loop
-    ld a, high(w_oam)
-    call h_dma
+    ; OAM DMA and repeat loop
+    ld a, high(wOAM)
+    call hDMA
     jp .loop
 ;

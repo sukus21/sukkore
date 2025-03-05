@@ -78,7 +78,7 @@ MACRO entsys_new
     ld l, c
     relpointer_init l
 
-    ;Write bank and step pointer
+    ; Write bank and step pointer
     ld [hl], bank(\2)
     relpointer_move ENTVAR_STEP
     ld a, low(\2)
@@ -86,7 +86,7 @@ MACRO entsys_new
     ld a, high(\2)
     ld [hl-], a
 
-    ;Set flags
+    ; Set flags
     relpointer_move ENTVAR_FLAGS
     ld [hl], \3
 ENDM

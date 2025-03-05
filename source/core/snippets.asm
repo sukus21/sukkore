@@ -2,7 +2,7 @@ INCLUDE "hardware.inc/hardware.inc"
 
 SECTION "SNIPPETS", ROM0
 
-; Copies data from one location to another using the CPU.
+; Copies data from one location to another using the CPU.  
 ; Lives in ROM0.
 ;
 ; Input:
@@ -15,26 +15,26 @@ SECTION "SNIPPETS", ROM0
 ; - `bc`: Source + Byte count
 ;
 ; Destroys: `af`, `de`
-memcpy::
+Memcpy::
 
-    ;Copy the data
+    ; Copy the data
     ld a, [bc]
     ld [hl+], a
     inc bc
     dec de
 
-    ;Check byte count
+    ; Check byte count
     ld a, d
     or e
-    jr nz, memcpy
+    jr nz, Memcpy
 
-    ;Return
+    ; Return
     ret 
 ;
 
 
 
-; Copies data from one location to another using the CPU.
+; Copies data from one location to another using the CPU.  
 ; Lives in ROM0.
 ;
 ; Input:
@@ -47,24 +47,24 @@ memcpy::
 ; - `bc`: Source + Byte count
 ;
 ; Saves: `e`
-memcpy_short::
+MemcpyShort::
 
-    ;Copy the data
+    ; Copy the data
     ld a, [bc]
     ld [hl+], a
     inc bc
 
-    ;Check byte count
+    ; Check byte count
     dec d
-    jr nz, memcpy_short
+    jr nz, MemcpyShort
 
-    ;Return
+    ; Return
     ret 
 ;
 
 
 
-; Sets a number of bytes at a location to a single value.
+; Sets a number of bytes at a location to a single value.  
 ; Lives in ROM0.
 ;
 ; Input:
@@ -77,25 +77,25 @@ memcpy_short::
 ; - `de`: `$0000`
 ;
 ; Destroys: `af`
-memset::
+Memset::
 
-    ;Fill data
+    ; Fill data
     ld a, b
     ld [hl+], a
     dec de
 
-    ;Check byte count
+    ; Check byte count
     ld a, d
     or e
-    jr nz, memset
+    jr nz, Memset
 
-    ;Return
+    ; Return
     ret
 ;
 
 
 
-; Sets a number of bytes at a location to a single value.
+; Sets a number of bytes at a location to a single value.  
 ; Lives in ROM0.
 ;
 ; Input:
@@ -109,24 +109,24 @@ memset::
 ;
 ; Destroys: `af`  
 ; Saves: `de`
-memset_short::
+MemsetShort::
 
-    ;Fill data
+    ; Fill data
     ld a, b
     ld [hl+], a
     dec c
 
-    ;Check byte count
-    jr nz, memset_short
+    ; Check byte count
+    jr nz, MemsetShort
 
-    ;Return
+    ; Return
     ret
 ;
 
 
 
-; Same as memcpy, but only stops once 0 is seen.
-; Made specifically to copy text.
+; Same as Memcpy, but only stops once 0 is seen.
+; Made specifically to copy text.  
 ; Lives in ROM0.
 ;
 ; Input:
@@ -134,24 +134,25 @@ memset_short::
 ; - `bc`: Source
 ;
 ; Saves: `de`
-strcpy::
+Strcpy::
 
-    ;Read character from stream
+    ; Read character from stream
     ld a, [bc]
     inc bc
 
-    ;If character is null, return
+    ; If character is null, return
     or a, a
     ret z
 
-    ;Write character to output and continue
+    ; Write character to output and continue
     ld [hl+], a
-    jr strcpy
+    jr Strcpy
 ;
 
 
 
 ; Compares two strings.
+; Strings are assumed to be 0-terminated.  
 ; Lives in ROM0.
 ; 
 ; Input: 
@@ -162,27 +163,27 @@ strcpy::
 ; `fz`: Strings are equal (z=1, strings are equal)
 ;
 ; Saves: `bc`
-strcomp::
+Strcomp::
 
-    ;Compare values, return if they don't match
+    ; Compare values, return if they don't match
     ld a, [de]
     cp a, [hl]
     ret nz
 
-    ;Return if [hl] == 0
+    ; Return if [hl] == 0
     inc de
     ld a, [hl+]
     cp a, 0
     ret z
 
-    ;Keep going
-    jr strcomp
+    ; Keep going
+    jr Strcomp
 ;
 
 
 
-; Copies a cgb palette to background color memory.
-; Assumes palette access.
+; Copies a cgb palette to background color memory.  
+; Assumes palette access.  
 ; Lives in ROM0.
 ;
 ; Input:
@@ -195,32 +196,32 @@ strcomp::
 ;
 ; Destroys: `bc`
 ; Saves: `de`
-palette_copy_bg::
+PaletteCopyBG::
 
-    ;Write palette index
+    ; Write palette index
     ld b, a
     set BCPSB_AUTOINC, a
     ldh [rBCPS], a
     ld c, low(rBCPD)
 
-    ;Copy the palette
+    ; Copy the palette
     REPT 8
         ld a, [hl+]
         ldh [c], a
     ENDR
 
-    ;Increase palette index
+    ; Increase palette index
     ld a, b
     add a, $08
 
-    ;Return
+    ; Return
     ret
 ;
 
 
 
-; Copies a cgb palette to sprite color memory.
-; Assumes palette access.
+; Copies a cgb palette to sprite color memory.  
+; Assumes palette access.  
 ; Lives in ROM0.
 ;
 ; Input:
@@ -233,130 +234,130 @@ palette_copy_bg::
 ;
 ; Destroys: `bc`
 ; Saves: `de`
-palette_copy_spr::
+PaletteCopyOBJ::
 
-    ;Write palette index
+    ; Write palette index
     ld b, a
     set OCPSB_AUTOINC, a
     ldh [rOCPS], a
     ld c, low(rOCPD)
 
-    ;Copy the palette
+    ; Copy the palette
     REPT 8
         ld a, [hl+]
         ldh [c], a
     ENDR
 
-    ;Increase palette index
+    ; Increase palette index
     ld a, b
     add a, $08
 
-    ;Return
+    ; Return
     ret
 ;
 
 
 
-; Copies ALL CGB palettes.
-; Assumes palette access.
+; Copies ALL CGB palettes.  
+; Assumes palette access.  
 ; Lives in ROM0.
 ; 
 ; Input:
 ; - `hl`: Palette address
 ;
 ; Saves: `de`
-palette_copy_all::
+PaletteCopyAll::
 
-    ;Set up background palette transfer
+    ; Set up background palette transfer
     ld a, BCPSF_AUTOINC
     ldh [rBCPS], a
     ld c, low(rBCPD)
     ld b, 8
 
-    ;Copy background palettes
-    .bgcopy
-        ;Copy one palette
+    ; Copy background palettes
+    .copyBG
+        ; Copy one palette
         REPT 8
             ld a, [hl+]
             ldh [c], a
         ENDR
 
-        ;Counter
+        ; Counter
         dec b
-        jr nz, .bgcopy
+        jr nz, .copyBG
     ;
 
-    ;Set up sprite palette transfer
+    ; Set up sprite palette transfer
     ld a, OCPSF_AUTOINC
     ldh [rOCPS], a
     ld c, low(rOCPD)
     ld b, 8
 
-    ;Copy sprite palettes
-    .sprcopy
+    ; Copy sprite palettes
+    .copyOBJ
 
-        ;Copy one palette
+        ; Copy one palette
         REPT 8
             ld a, [hl+]
             ldh [c], a
         ENDR
 
-        ;Counter
+        ; Counter
         dec b
-        jr nz, .sprcopy
+        jr nz, .copyOBJ
     ;
 
-    ;Return
+    ; Return
     ret 
 ;
 
 
 
-; Creates a copy of the currently loaded CGB palettes.
+; Creates a copy of the currently loaded CGB palettes.  
 ; Lives in ROM0.
 ;
 ; Input:
 ; - `hl`: Where to store the new palettes
 ; 
 ; Destroys: all
-palette_make_lighter::
+PaletteMakeLighter::
     ld d, h
     ld e, l
     push hl
 
-    ;First, copy all palettes to the destination
+    ; First, copy all palettes to the destination
     ld hl, rBCPS
     ld [hl], 0
     ld c, low(rBCPD)
     ld b, $40
 
-    .copybg
+    .copyBG
         ldh a, [c]
         ld [de], a
         inc de
         inc [hl]
         dec b
-        jr nz, .copybg
+        jr nz, .copyBG
     ;
 
-    ;Now copy sprite palettes
+    ; Now copy sprite palettes
     ld hl, rOCPS
     ld [hl], 0
     ld c, low(rOCPD)
     ld b, $40
 
-    .copyobj
+    .copyOBJ
         ldh a, [c]
         ld [de], a
         inc de
         inc [hl]
         dec b
-        jr nz, .copyobj
+        jr nz, .copyOBJ
     ;
 
 
 
-    ;Initialize modifying
+    ; Initialize modifying
     pop hl
     ld b, $40
     push bc
@@ -367,7 +368,7 @@ palette_make_lighter::
         ld a, [hl-]
         ld d, a
 
-        ;Red
+        ; Red
         ld a, d
         and a, %01111100
         add a, %00001100
@@ -377,7 +378,7 @@ palette_make_lighter::
         :
         ld b, a
 
-        ;Green
+        ; Green
         ld a, d
         and a, %00000011
         ld c, a
@@ -396,7 +397,7 @@ palette_make_lighter::
         or a, b
         ld b, a
 
-        ;Blue
+        ; Blue
         ld a, e
         and a, %00011111
         add a, %00000011
@@ -407,7 +408,7 @@ palette_make_lighter::
         or a, c
         ld c, a
 
-        ;Store this value
+        ; Store this value
         ld a, c
         ld [hl+], a
         ld a, b
@@ -418,7 +419,7 @@ palette_make_lighter::
         push bc
         jr nz, .modify
 
-    ;Return
+    ; Return
     pop af
     ret 
 ;
@@ -426,8 +427,8 @@ palette_make_lighter::
 
 
 ; Switches bank and calls a given address.
-; Does NOT switch banks back after returning.
-; Usefull when bankjumping from a non-bankable area.
+; Usefull when bankjumping from a non-bankable area.  
+; Does NOT switch banks back after returning.  
 ; Lives in ROM0.
 ;
 ; Input:
@@ -435,21 +436,21 @@ palette_make_lighter::
 ; - `hl`: Address to jump to
 ;
 ; Destroys: `a`, unknown
-bank_call_0::
+Farcall0::
 
-    ;Switch banks
+    ; Switch banks
     ld a, b
-    ldh [h_bank_number], a
+    ldh [hBankNumber], a
     ld [rROMB0], a
 
-    ;Jump
+    ; Jump
     jp hl
 ;
 
 
 
-; Switches bank and calls a given address.
-; Switches banks back after returning.
+; Switches bank and calls a given address.  
+; Switches banks back after returning.  
 ; Lives in ROM0.
 ;
 ; Input:
@@ -458,33 +459,33 @@ bank_call_0::
 ;
 ; Destroys: `a`, unknown
 ; Saves: `rROMB0`
-bank_call_x::
+FarcallX::
 
-    ;Set up things for returning
-    ldh a, [h_bank_number]
+    ; Set up things for returning
+    ldh a, [hBankNumber]
     push af
 
-    ;Switch banks
+    ; Switch banks
     ld a, b
-    ldh [h_bank_number], a
+    ldh [hBankNumber], a
     ld [rROMB0], a
 
-    ;Jump
+    ; Jump
     call _hl_
 
-    ;Returning after jump, reset bank number
+    ; Returning after jump, reset bank number
     pop af
-    ldh [h_bank_number], a
+    ldh [hBankNumber], a
     ld [rROMB0], a
 
-    ;Return
+    ; Return
     ret
 ;
 
 
 
-; Switches bank and calls a given address.
-; Switches banks back after returning.
+; Switches bank and calls a given address.  
+; Switches banks back after returning.  
 ; Lives in ROM0.
 ;
 ; Input:
@@ -493,32 +494,32 @@ bank_call_x::
 ;
 ; Destroys: `a`, unknown
 ; Saves: `rROMB0`
-bank_call_xd::
+FarcallXD::
 
-    ;Store current bank number
-    ldh a, [h_bank_number]
+    ; Store current bank number
+    ldh a, [hBankNumber]
     push af
 
-    ;Switch banks
+    ; Switch banks
     ld a, d
-    ldh [h_bank_number], a
+    ldh [hBankNumber], a
     ld [rROMB0], a
 
-    ;Jump
+    ; Jump
     call _hl_
 
-    ;Returning after jump, reset banks
+    ; Returning after jump, reset banks
     pop af
-    ldh [h_bank_number], a
+    ldh [hBankNumber], a
     ld [rROMB0], a
 
-    ;Return
+    ; Return
     ret 
 ;
 
 
 
-; Literally just jumps to the address of HL.
+; Literally just jumps to the address of HL.  
 ; Lives in ROM0.
 ; 
 ; Input:
@@ -531,8 +532,8 @@ _hl_::
 
 
 
-; Jumps to the address of BC.
-; Avoid using this if possible, only exists for completeness.
+; Jumps to the address of BC.  
+; Avoid using this if possible, only exists for completeness.  
 ; Lives in ROM0.
 ;
 ; Input:
@@ -546,8 +547,8 @@ _bc_::
 
 
 
-; Jumps to the address of DE.
-; Avoid using this if possible, only exists for completeness.
+; Jumps to the address of DE.  
+; Avoid using this if possible, only exists for completeness.  
 ; Lives in ROM0.
 ;
 ; Input:
@@ -561,7 +562,7 @@ _de_::
 
 
 
-; Set CPU speed.
+; Set CPU speed.  
 ; Lives in ROM0.
 ;
 ; Input:
@@ -569,21 +570,21 @@ _de_::
 ;
 ; Destroys: `a`, `hl`
 ; Saves: `e`
-cpu_speedtogle::
+SetCPUSpeed::
 
-    ;Ignore ENTIRELY if not on a color machine
-    ldh a, [h_is_color]
+    ; Ignore ENTIRELY if not on a color machine
+    ldh a, [hIsCGB]
     cp a, 0
     ret z
 
-    ;Ignore function call if CPU speed is already as desired
+    ; Ignore function call if CPU speed is already as desired
     ld hl, rKEY1
     ld a, [hl]
     and a, KEY1F_DBLSPEED
     cp a, b
     ret z
 
-    ;Double CPU speed
+    ; Double CPU speed
     ldh a, [rIE]
     ld d, a
     xor a
@@ -596,15 +597,15 @@ cpu_speedtogle::
     ld a, d
     ldh [rIE], a
 
-    ;Return
+    ; Return
     ret
 ;
 
 
 
 ; Stalls until it reaches the desired scanline.
-; Returns in HBLANK the scanline before.
-; Does not use interrupts.
+; Returns in HBLANK the scanline before.  
+; Does not use interrupts.  
 ; Lives in ROM0.
 ;
 ; Input:
@@ -612,9 +613,9 @@ cpu_speedtogle::
 ;
 ; Destroys: `af`, `hl`, `b`
 ; Saves: `de`
-wait_scanline::
+WaitScanline::
 
-    ;Wait for scanline
+    ; Wait for scanline
     dec c
     ld hl, rLY
     ld a, c
@@ -622,21 +623,21 @@ wait_scanline::
     cp a, [hl]
     jr nz, :-
 
-    ;Scanline has been hit, wait for mode 0
-    ld l, low(rSTAT) ;h was set to $FF previously
+    ; Scanline has been hit, wait for mode 0
+    ld l, low(rSTAT) ; h was set to $FF previously
     ld b, STATF_LCD
     :
     ld a, [hl]
     and a, b
     jr nz, :-
 
-    ;Return
+    ; Return
     ret 
 ;
 
 
 
-; Detect if current hardware is GBC compatible or not.
+; Detect if current hardware is CGB compatible or not.  
 ; Lives in ROM0.
 ; 
 ; Returns:
@@ -645,33 +646,33 @@ wait_scanline::
 ; - `fC`: result (1 = CGB compatible)
 ;
 ; Saves: none
-detect_gbc::
+DetectCGB::
     ld hl, _RAMBANK
     ld c, low(rSVBK)
 
-    ;Save bank page
+    ; Save bank page
     ldh a, [c]
     ld b, a
 
-    ;Overwrite byte 1
+    ; Overwrite byte 1
     ld a, 1
     ldh [c], a
     ld d, [hl]
     ld [hl], a
 
-    ;Overwrite byte 2
+    ; Overwrite byte 2
     inc a
     ldh [c], a
     ld e, [hl]
     ld [hl], a
 
-    ;Compare
+    ; Compare
     dec a
     ldh [c], a
     ld a, [hl]
     sub a, 2
 
-    ;Restore without altering flags
+    ; Restore without altering flags
     ld [hl], d
     ld d, a
     ld a, 1
@@ -680,7 +681,7 @@ detect_gbc::
     ld a, b
     ldh [c], a
 
-    ;Return
+    ; Return
     ld a, d
     ret
 ;
@@ -695,43 +696,43 @@ detect_gbc::
 ; - `3`: CGB palette index (0/1)
 MACRO set_palette
     ldh [\1], a
-    ldh a, [h_is_color]
+    ldh a, [hIsCGB]
     or a, a
     ldh a, [\1]
     ret z
 
-    ;CGB time
+    ; CGB time
     push bc
     push hl
 
-    ;Prepare data transfer
+    ; Prepare data transfer
     ld b, a
     ld c, low(\2)
     ld a, BCPSF_AUTOINC | (\3 * 8)
     ldh [c], a
     inc c
-    ld hl, w_cgb_palette
+    ld hl, wPaletteCGB
 
-    ;Start
+    ; Start
     REPT 4
         ld a, b
         and a, %00000011
         add a, a
-        add a, low(w_cgb_palette)
+        add a, low(wPaletteCGB)
         ld l, a
 
-        ;Copy color
+        ; Copy color
         ld a, [hl+]
         ldh [c], a
         ld a, [hl+]
         ldh [c], a
 
-        ;End of loop
+        ; End of loop
         rrc b
         rrc b
     ENDR
 
-    ;Return
+    ; Return
     ld a, b
     pop hl
     pop bc
@@ -748,8 +749,8 @@ ENDM
 ; - `a`: Palette
 ;
 ; Destroys: `f`
-set_palette_bgp::
-    ld [w_bgp], a
+PaletteSetBGP::
+    ld [wPaletteBGP], a
     set_palette rBGP, rBCPS, 0
 ;
 
@@ -763,10 +764,11 @@ set_palette_bgp::
 ; - `a`: Palette
 ;
 ; Destroys: `f`
-set_palette_obp0::
-    ld [w_obp0], a
+PaletteSetOBP0::
+    ld [wPaletteOBP0], a
     set_palette rOBP0, rOCPS, 0
 ;
+
 
 
 ; Set CGB object palette 1, as if it was DMG.  
@@ -777,8 +779,8 @@ set_palette_obp0::
 ; - `a`: Palette
 ;
 ; Destroys: `f`
-set_palette_obp1::
-    ld [w_obp1], a
+PaletteSetOBP1::
+    ld [wPaletteOBP1], a
     set_palette rOBP1, rOCPS, 1
 ;
 
@@ -794,11 +796,11 @@ set_palette_obp1::
 ; - `a`: BCD value
 ;
 ; Destroys: `f`
-bin2bcd::
+BinToBcd::
     cp a, 10
     ret c
 
-    ;Do the conversion
+    ; Do the conversion
     push bc
     ld b, $FF
     .loop
@@ -807,7 +809,7 @@ bin2bcd::
         jr nc, .loop
     ;
 
-    ;Aaand we are done here
+    ; Aaand we are done here
     add a, 10
     swap b
     or a, b
@@ -827,7 +829,7 @@ bin2bcd::
 ; - `a`: Binary value
 ;
 ; Destroys: `f`, `bc`
-bcd2bin::
+BcdToBin::
     ld c, a
     swap a
     and a, %00001111
@@ -844,7 +846,7 @@ bcd2bin::
 
     ret
 
-    ;This is all we need
+    ; This is all we need
     .quick
     ld a, c
     and a, %00001111
@@ -861,10 +863,10 @@ bcd2bin::
 ; - `a`: Bank to switch to
 ; - `hl`: Address in bank
 ;
-; Destroys: `a`, ``
-farcall_handler_x::
+; Destroys: `a`, unknown
+FarcallHandlerX::
     ld [rROMB0], a
-    ldh a, [h_bank_number]
+    ldh a, [hBankNumber]
     push af
     call _hl_
     pop af

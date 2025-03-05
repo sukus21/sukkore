@@ -8,10 +8,10 @@ SECTION "GAMELOOP LOADING", ROM0
 ; Assumes LCD is turned on.  
 ; Disables interrupts.  
 ; Lives in ROM0.
-gameloop_loading::
+GameloopLoading::
     di
 
-    ;Enable only V-blank
+    ; Enable only V-blank
     ld a, IEF_VBLANK
     ldh [rIE], a
     
@@ -21,13 +21,13 @@ gameloop_loading::
         halt
         nop
 
-        ;Now in V-blank
-        call vqueue_execute
-        call vqueue_empty
+        ; Now in V-blank
+        call VQueueExecute
+        call VQueueEmpty
         jr nz, .loop
     ;
 
-    ;Return
+    ; Return
     ret
 ;
 
@@ -40,18 +40,18 @@ gameloop_loading::
 ; - `a`: Fade state (`COLOR_FADESTATE_*`)
 ;
 ; Destroys: all
-transition_fade_init::
+TransitionFadeInit::
 
-    ;Set new state and reset timer
+    ; Set new state and reset timer
     and a, COLOR_FADEM_STATE
     ld b, a
-    ld hl, w_fade_state
+    ld hl, wFadeState
     ld a, [hl]
-    and a, COLOR_FADEM_STEP ;this resets timer
+    and a, COLOR_FADEM_STEP ; this resets timer
     or a, b
     ld [hl], a
 
-    ;Yup, that should do it
+    ; Yup, that should do it
     ret
 ;
 
@@ -60,12 +60,12 @@ transition_fade_init::
 ; Run DMG fade routine.  
 ; Assumes palette access.  
 ; Lives in ROM0.
-transition_fade_step::
-    ld hl, w_fade_state
+TransitionFadeStep::
+    ld hl, wFadeState
     bit COLOR_FADEB_RUNNING, [hl]
     ret z
 
-    ;Increment timer
+    ; Increment timer
     ld a, [hl]
     inc a
     ld [hl], a
@@ -74,10 +74,10 @@ transition_fade_step::
     and a, %11110000
     ld [hl], a
 
-    ;What direction to fade?
+    ; What direction to fade?
     bit COLOR_FADEB_DIRECTION, a
-    jr z, transition_fade_in
-    jr transition_fade_out
+    jr z, TransitionFadeIn
+    jr TransitionFadeOut
 ;
 
 
@@ -87,42 +87,42 @@ transition_fade_step::
 ; Lives in ROM0.
 ;
 ; Input:
-; - `a`: @`w_fade_state`
-; - `hl`: `w_fade_state`
-transition_fade_out::
+; - `a`: @`wFadeState`
+; - `hl`: `wFadeState`
+TransitionFadeOut::
     
-    ;Update this
+    ; Update this
     and a, COLOR_FADEM_STEP
     ret z
     ld a, [hl]
     sub a, 16
     ld [hl], a
 
-    ;Finish after this step?
+    ; Finish after this step?
     and a, COLOR_FADEM_STEP
     jr nz, :+
         res COLOR_FADEB_RUNNING, [hl]
     :
 
-    ;Some very nice values
+    ; Some very nice values
     ld de, %01000000_11000000
 
-    ;Fade out BGP
-    ld a, [w_bgp]
+    ; Fade out BGP
+    ld a, [wPaletteBGP]
     call .helper
-    call set_palette_bgp
+    call PaletteSetBGP
 
-    ;Fade out OBP0
-    ld a, [w_obp0]
+    ; Fade out OBP0
+    ld a, [wPaletteOBP0]
     call .helper
-    call set_palette_obp0
+    call PaletteSetOBP0
 
-    ;Fade out OBP1
-    ld a, [w_obp1]
+    ; Fade out OBP1
+    ld a, [wPaletteOBP1]
     call .helper
-    call set_palette_obp1
+    call PaletteSetOBP1
 
-    ;Return
+    ; Return
     ret
 
     ; Having this here saves a little bit of ROM usage.
@@ -147,11 +147,11 @@ transition_fade_out::
 ; Lives in ROM0.
 ;
 ; Input:
-; - `a`: @`w_fade_state`
-; - `hl`: `w_fade_state`
-transition_fade_in::
+; - `a`: @`wFadeState`
+; - `hl`: `wFadeState`
+TransitionFadeIn::
     
-    ;Update this
+    ; Update this
     and a, COLOR_FADEM_STEP
     cp a, COLOR_FADEM_STEP
     ret z
@@ -159,58 +159,58 @@ transition_fade_in::
     add a, 16
     ld [hl], a
     
-    ;End after this iteration?
+    ; End after this iteration?
     and a, COLOR_FADEM_STEP
     cp a, COLOR_FADEM_STEP
     jr nz, :+
         res COLOR_FADEB_RUNNING, [hl]
     :
 
-    ;Get current step -> D
+    ; Get current step -> D
     ld e, %00000011
     swap a
     and a, e
     ld d, a
 
-    ;This is a surprise tool that will help us later ;)
-    ld hl, w_obp1+1
+    ; This is a surprise tool that will help us later ; )
+    ld hl, wPaletteOBP1+1
 
-    ;Fade OBP1
+    ; Fade OBP1
     ld a, [hl-]
     call .helper
     ld a, [hl-]
     sub a, c
-    call set_palette_obp1
+    call PaletteSetOBP1
 
-    ;Fade OBP0
+    ; Fade OBP0
     ld a, [hl-]
     call .helper
     ld a, [hl-]
     sub a, c
-    call set_palette_obp0
+    call PaletteSetOBP0
 
-    ;Fade BGP
+    ; Fade BGP
     ld a, [hl-]
     call .helper
     ld a, [hl-]
     sub a, c
-    call set_palette_bgp
+    call PaletteSetBGP
 
-    ;Return
+    ; Return
     ret
 
     .helper
         ld b, a
         ld c, 0
 
-        ;Do ONE color
+        ; Do ONE color
         and a, e
         cp a, d
         jr nc, :+
             set 0, c
         :
 
-        ;Do another
+        ; Do another
         ld a, b
         rrca
         rrca
@@ -221,7 +221,7 @@ transition_fade_in::
             set 2, c
         :
 
-        ;Do another
+        ; Do another
         ld a, b
         rrca
         rrca
@@ -232,7 +232,7 @@ transition_fade_in::
             set 4, c
         :
 
-        ;Do another
+        ; Do another
         ld a, b
         rrca
         rrca
@@ -242,7 +242,7 @@ transition_fade_in::
             set 6, c
         :
 
-        ;Yup, that's it
+        ; Yup, that's it
         ret
     ;
 ;

@@ -11,7 +11,7 @@ SECTION "RECTANGLE DRAWER", ROM0
 ; Tileset used by rectangle drawing.  
 ; Should be placed at tile ID `RECTANGLE_TILES`.  
 ; Lives in ROM0.
-rectangle_tileset:
+RectangleTileset:
     db $FF, $FF, $00, $00, $00, $00, $00, $00
     db $00, $00, $00, $00, $00, $00, $00, $00
     db $00, $00, $00, $00, $00, $00, $00, $00
@@ -26,7 +26,7 @@ rectangle_tileset:
 
 ; Tileset used by rectangle estimate drawer.  
 ; Lives in ROM0.
-rectangle_points_tileset:
+RectanglePointsTileset:
     db $80, $C0, $C0, $40, $00, $00, $00, $00
     db $00, $00, $00, $00, $00, $00, $00, $00
     db $00, $00, $00, $00, $00, $00, $00, $00
@@ -41,11 +41,11 @@ rectangle_points_tileset:
 ;
 ; Input:
 ; - `b`: Destination tile ID
-rectangle_points_load::
+RectanglePointsLoad::
     ld a, b
-    ld [w_sprite_rectangle], a
+    ld [wSpriteRectangle], a
 
-    ;Get real address pointer -> DE
+    ; Get real address pointer -> DE
     swap a
     ld b, a
     and a, %11110000
@@ -56,8 +56,8 @@ rectangle_points_load::
     add a, high(_VRAM)
     ld d, a
 
-    ;Add VQUEUE transfer
-    vqueue_add_copy VQUEUE_TYPE_DIRECT, de, rectangle_points_tileset
+    ; Add VQUEUE transfer
+    vqueue_add_copy VQUEUE_TYPE_DIRECT, de, RectanglePointsTileset
     ret
 ;
 
@@ -67,11 +67,11 @@ rectangle_points_load::
 ; Assumes VRAM access.
 ; Overwrites VRAM tiles.
 ; Lives in ROM0.
-rectangle_load::
+RectangleLoad::
     ld hl, _VRAM + RECTANGLE_TILES * 16
-    ld bc, rectangle_tileset
+    ld bc, RectangleTileset
     ld d, 4*16
-    jp memcpy_short
+    jp MemcpyShort
 ;
 
 
@@ -82,9 +82,9 @@ rectangle_load::
 ; Input:
 ; - `e`: player input
 ; - `hl`: Pointer to rectangle buffer [XYwh]
-rectangle_movement::
+RectangleMovement::
 
-    ;X-position
+    ; X-position
     bit PADB_A, e
     jr nz, :+
     bit PADB_LEFT, e
@@ -100,7 +100,7 @@ rectangle_movement::
     ld a, [hl+]
     ld b, a
 
-    ;Y-position
+    ; Y-position
     bit PADB_A, e
     jr nz, :+
     bit PADB_UP, e
@@ -116,7 +116,7 @@ rectangle_movement::
     ld a, [hl+]
     ld c, a
 
-    ;Width
+    ; Width
     bit PADB_A, e
     jr z, :+
     bit PADB_LEFT, e
@@ -132,7 +132,7 @@ rectangle_movement::
     ld a, [hl+]
     ld d, a
 
-    ;Height
+    ; Height
     bit PADB_A, e
     jr z, :+
     bit PADB_UP, e
@@ -148,8 +148,8 @@ rectangle_movement::
     ld a, [hl+]
     ld e, a
 
-    ;Draw rectangle
-    call rectangle_draw
+    ; Draw rectangle
+    call RectangleDraw
     ret 
 ;
 
@@ -166,9 +166,9 @@ rectangle_movement::
 ; - `e`: height of rectangle
 ;
 ; Saves: none
-rectangle_draw::
+RectangleDraw::
 
-    ;Adjust positions
+    ; Adjust positions
     ld a, b
     add a, 8
     ld b, a
@@ -178,32 +178,32 @@ rectangle_draw::
     push bc
     push de
 
-    ;Get bottom Y-position in E
+    ; Get bottom Y-position in E
     ld a, c
     add a, e
     dec a
     ld e, a
 
-    ;Draw top and bottom
+    ; Draw top and bottom
     ld a, d
     and a, %00000111
     jr z, :+
         push bc
 
-        ;Get edge X-position
+        ; Get edge X-position
         ld a, b
         add a, d
         sub a, 8
         ld h, a
 
-        ;Allocate edge sprites
+        ; Allocate edge sprites
         ld b, 8
-        call sprite_get
+        call SpriteGet
         ld b, h
-        ld h, high(w_oam)
+        ld h, high(wOAM)
         ld l, a
 
-        ;Top sprite
+        ; Top sprite
         ld a, c
         ld [hl+], a
         ld a, b
@@ -213,7 +213,7 @@ rectangle_draw::
         xor a
         ld [hl+], a
 
-        ;Bottom sprite
+        ; Bottom sprite
         ld a, e
         ld [hl+], a
         ld a, b
@@ -223,11 +223,11 @@ rectangle_draw::
         xor a
         ld [hl+], a
 
-        ;Restore state
+        ; Restore state
         pop bc
     :
 
-    ;Get sprites
+    ; Get sprites
     ld h, b
     ld a, d
     and a, %11111000
@@ -235,15 +235,15 @@ rectangle_draw::
     rrca 
     rrca 
     rrca 
-    jr z, .done_hor
+    jr z, .doneHor
     push af
-    call sprite_get
+    call SpriteGet
     ld b, h
-    ld h, high(w_oam)
+    ld h, high(wOAM)
     ld l, a
 
-    .loop_hor
-        ;Top sprite
+    .lookHor
+        ; Top sprite
         ld a, c
         ld [hl+], a
         ld a, b
@@ -253,7 +253,7 @@ rectangle_draw::
         xor a
         ld [hl+], a
 
-        ;Bottom sprite
+        ; Bottom sprite
         ld a, e
         ld [hl+], a
         ld a, b
@@ -265,45 +265,45 @@ rectangle_draw::
         xor a
         ld [hl+], a
 
-        ;More sprites?
+        ; More sprites?
         pop af
         dec a
-        jr z, .done_hor
+        jr z, .doneHor
         push af
-        jr .loop_hor
-    .done_hor
+        jr .lookHor
+    .doneHor
 
-    ;Vertical time
+    ; Vertical time
     pop de
     pop bc
 
-    ;Get rightmost X-position in D
+    ; Get rightmost X-position in D
     ld a, b
     add a, d
     dec a
     ld d, a
 
-    ;Draw left and right
+    ; Draw left and right
     ld a, e
     and a, %00000111
     jr z, :+
         push bc
 
-        ;Get edge Y-position
+        ; Get edge Y-position
         ld a, c
         add a, e
         sub a, 8
         ld c, a
 
-        ;Allocate edge sprites
+        ; Allocate edge sprites
         ld h, b
         ld b, 8
-        call sprite_get
+        call SpriteGet
         ld b, h
-        ld h, high(w_oam)
+        ld h, high(wOAM)
         ld l, a
 
-        ;Left sprite
+        ; Left sprite
         ld a, c
         ld [hl+], a
         ld a, b
@@ -313,7 +313,7 @@ rectangle_draw::
         xor a
         ld [hl+], a
 
-        ;Right sprite
+        ; Right sprite
         ld a, c
         ld [hl+], a
         ld a, d
@@ -323,11 +323,11 @@ rectangle_draw::
         xor a
         ld [hl+], a
 
-        ;Restore state
+        ; Restore state
         pop bc
     :
 
-    ;Get sprites
+    ; Get sprites
     ld h, b
     ld a, e
     and a, %11111000
@@ -337,13 +337,13 @@ rectangle_draw::
     rrca 
     ret z
     push af
-    call sprite_get
+    call SpriteGet
     ld b, h
-    ld h, high(w_oam)
+    ld h, high(wOAM)
     ld l, a
 
-    .loop_ver
-        ;Left sprite
+    .loopVer
+        ; Left sprite
         ld a, c
         ld [hl+], a
         ld a, b
@@ -353,7 +353,7 @@ rectangle_draw::
         xor a
         ld [hl+], a
 
-        ;Right sprite
+        ; Right sprite
         ld a, c
         ld [hl+], a
         add a, 8
@@ -365,15 +365,15 @@ rectangle_draw::
         xor a
         ld [hl+], a
 
-        ;More sprites?
+        ; More sprites?
         pop af
         dec a
         ret z
         push af
-        jr .loop_ver
+        jr .loopVer
     ;
 
-    ;Return
+    ; Return
     ret
 ;
 
@@ -391,13 +391,13 @@ rectangle_draw::
 ; - `h`: high byte of OAM mirror pointer
 ;
 ; Saves: none
-rectangle_points_draw::
+RectanglePointsDraw::
     push bc
     ld b, 4*4
-    call sprite_get
+    call SpriteGet
     pop bc
 
-    ;Draw top-left
+    ; Draw top-left
     ld a, c
     add a, 16
     ld c, a
@@ -406,25 +406,25 @@ rectangle_points_draw::
     add a, 8
     ld b, a
     ld [hl+], a
-    ld a, [w_sprite_rectangle]
+    ld a, [wSpriteRectangle]
     ld [hl+], a
     xor a
     ld [hl+], a
 
-    ;Draw top-right
+    ; Draw top-right
     ld a, c
     ld [hl+], a
     ld a, d
     add a, 6
     ld d, a
     ld [hl+], a
-    ld a, [w_sprite_rectangle]
+    ld a, [wSpriteRectangle]
     ld c, a
     ld [hl+], a
     xor a
     ld [hl+], a
 
-    ;Draw bottom-left
+    ; Draw bottom-left
     ld a, e
     add a, 14
     ld e, a
@@ -436,7 +436,7 @@ rectangle_points_draw::
     xor a
     ld [hl+], a
 
-    ;Draw bottom-right
+    ; Draw bottom-right
     ld a, e
     ld [hl+], a
     ld a, d
@@ -445,6 +445,6 @@ rectangle_points_draw::
     ld [hl+], a
     ld [hl], 0
 
-    ;Return
+    ; Return
     ret
 ;

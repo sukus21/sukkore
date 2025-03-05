@@ -40,7 +40,7 @@ MACRO tilemap_alloc
     ASSERT \4 + \6 <= 32, "y+height above 32 for \2"
     ASSERT _NARG == 6, "tilemap_alloc requires 6 parameters for \2"
 
-    ;Make sure all spots are valid
+    ; Make sure all spots are valid
     DEF __tlmv_x = \3
     REPT \5
         DEF __tlmv_y = \4
@@ -52,7 +52,7 @@ MACRO tilemap_alloc
         DEF __tlmv_x = __tlmv_x + 1
     ENDR
 
-    ;Define parameters
+    ; Define parameters
     DEF tlmv_addr = \1 + \3 + (\4 * 32)
     PURGE __tlmv_x, __tlmv_y
 ENDM

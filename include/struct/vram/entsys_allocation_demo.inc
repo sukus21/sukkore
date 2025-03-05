@@ -4,7 +4,7 @@
 INCLUDE "hardware.inc/hardware.inc"
 INCLUDE "macro/tilemap.inc"
 
-;Block 0
+; Block 0
 RSSET $00
     DEF EQRB EQUS "$8000 + $10 * _RS"
 
@@ -13,7 +13,7 @@ RSSET $00
     DEF VTI_ENTALLOC_FONT RB $80
 ASSERT _RS <= $80
 
-;Block 1
+; Block 1
 RSSET $80
     PURGE EQRB
     DEF EQRB EQUS "$8000 + $10 * _RS"
@@ -32,7 +32,7 @@ RSSET $80
 ASSERT _RS <= $100
  
 
-;SCRN 0
+; SCRN 0
     tilemap_alloc _SCRN0, "VM_ENTALLOC_CHUNKS", 0, 0, 16, 4
     ; Location of chunk viewer.  
     ; Spans 16x4 tiles.  

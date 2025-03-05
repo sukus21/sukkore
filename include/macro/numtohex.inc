@@ -19,24 +19,24 @@ MACRO num_to_hex
     ENDC
     ld \2, a
 
-    ;Convert low nybble
+    ; Convert low nybble
     and a, %00001111
     add a, "0"
     cp a, ":"
-    jr c, .num_to_hex1_\@
+    jr c, .numToHex1\@
         add a, "A" - ":"
-    .num_to_hex1_\@
+    .numToHex1\@
     ld \3, a
 
-    ;Convert high nybble
+    ; Convert high nybble
     ld a, \2
     swap a
     and a, %00001111
     add a, "0"
     cp a, ":"
-    jr c, .num_to_hex2_\@
+    jr c, .numToHex2\@
         add a, "A" - ":"
-    .num_to_hex2_\@
+    .numToHex2\@
     ld \2, a
 ENDM
 

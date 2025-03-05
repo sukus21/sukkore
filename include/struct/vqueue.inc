@@ -88,16 +88,16 @@ DEF VQUEUE_T RB 0
 ; - `4`: Source (label)
 ; - `5*`: Writeback pointer (address/label, default: 0)
 MACRO vqueue_prepare
-    db \1           ;type
-    db \2           ;transfer operation count
-    db $00          ;progress
-    dw \3           ;destination
-    db bank(\4)     ;source bank
-    dw \4           ;source
+    db \1           ; type
+    db \2           ; transfer operation count
+    db $00          ; progress
+    dw \3           ; destination
+    db bank(\4)     ; source bank
+    dw \4           ; source
     IF _NARG == 5
-        dw \5       ;writeback pointer
+        dw \5       ; writeback pointer
     ELSE
-        dw $0000    ;writeback pointer
+        dw $0000    ; writeback pointer
     ENDC
 ENDM
 
@@ -121,20 +121,20 @@ MACRO vqueue_prepare_copy
         ASSERT (\3.end - \3) % (16) == 0
     ENDC
 
-    db \1 | VQUEUE_MODEFLAG_COPYMODE    ;type
+    db \1 | VQUEUE_MODEFLAG_COPYMODE    ; type
     IF _NARG == 5
-        db (\3.end - \3) / (\5)         ;transfer operation count
+        db (\3.end - \3) / (\5)         ; transfer operation count
     ELSE
-        db (\3.end - \3) / (16)         ;transfer operation count
+        db (\3.end - \3) / (16)         ; transfer operation count
     ENDC
-    db $00                              ;progress
-    dw \2                               ;destination
-    db bank(\3)                         ;source bank
-    dw \3                               ;source
+    db $00                              ; progress
+    dw \2                               ; destination
+    db bank(\3)                         ; source bank
+    dw \3                               ; source
     IF _NARG >= 4
-        dw \4                           ;writeback pointer
+        dw \4                           ; writeback pointer
     ELSE
-        dw $0000                        ;writeback pointer
+        dw $0000                        ; writeback pointer
     ENDC
 ENDM
 
@@ -151,16 +151,16 @@ ENDM
 ; - `4`: Byte value (n8)
 ; - `5*`: Writeback pointer (address/label, default: 0)
 MACRO vqueue_prepare_set
-    db \1 | VQUEUE_MODEFLAG_SETMODE ;type
-    db \2                           ;transfer operation count
-    db $00                          ;progress
-    dw \3                           ;destination
-    db \4                           ;fill byte
-    dw $0000                        ;source data (unused for SET mode)
+    db \1 | VQUEUE_MODEFLAG_SETMODE ; type
+    db \2                           ; transfer operation count
+    db $00                          ; progress
+    dw \3                           ; destination
+    db \4                           ; fill byte
+    dw $0000                        ; source data (unused for SET mode)
     IF _NARG == 5
-        dw \5                       ;writeback pointer
+        dw \5                       ; writeback pointer
     ELSE
-        dw $0000                    ;writeback pointer
+        dw $0000                    ; writeback pointer
     ENDC
 ENDM
 
@@ -178,7 +178,7 @@ MACRO vqueue_enqueue_auto
     ld a, bank(\1)
     ld [rROMB0], a
     ld de, \1
-    call vqueue_enqueue
+    call VQueueEnqueue
 ENDM
 
 
@@ -198,23 +198,23 @@ ENDM
 ; Destroys: `af`  
 ; Saves: `bc`, `de`
 MACRO vqueue_add
-    call vqueue_get
+    call VQueueGet
 
-    ;Write type and length
+    ; Write type and length
     ld a, \1
-    ld [hl+], a ;type
+    ld [hl+], a ; type
     ld a, \2
-    ld [hl+], a ;length
+    ld [hl+], a ; length
     xor a
-    ld [hl+], a ;progress
+    ld [hl+], a ; progress
 
-    ;Write destination
+    ; Write destination
     ld a, low(\3)
-    ld [hl+], a ;destination (low)
+    ld [hl+], a ; destination (low)
     ld a, high(\3)
-    ld [hl+], a ;destination (high)
+    ld [hl+], a ; destination (high)
     
-    ;Write source
+    ; Write source
     ld a, bank(\4)
     ld [hl+], a
     ld a, low(\4)
@@ -247,27 +247,27 @@ MACRO vqueue_add_copy
     ELSE
         ASSERT (\3.end - \3) % (16) == 0
     ENDC
-    call vqueue_get
+    call VQueueGet
 
-    ;Write type and length
+    ; Write type and length
     ld a, \1 | VQUEUE_MODEFLAG_COPYMODE
-    ld [hl+], a ;type
+    ld [hl+], a ; type
     IF _NARG == 4
         ld a, (\3.end - \3) / (\4)
     ELSE
         ld a, (\3.end - \3) / (16)
     ENDC
-    ld [hl+], a ;length
+    ld [hl+], a ; length
     xor a
-    ld [hl+], a ;progress
+    ld [hl+], a ; progress
 
-    ;Write destination
+    ; Write destination
     ld a, low(\2)
-    ld [hl+], a ;destination (low)
+    ld [hl+], a ; destination (low)
     ld a, high(\2)
-    ld [hl+], a ;destination (high)
+    ld [hl+], a ; destination (high)
     
-    ;Write source
+    ; Write source
     ld a, bank(\3)
     ld [hl+], a
     ld a, low(\3)
@@ -293,23 +293,23 @@ ENDM
 ; Destroys: `af`  
 ; Saves: `bc`, `de`
 MACRO vqueue_add_set
-    call vqueue_get
+    call VQueueGet
 
-    ;Write type and length
+    ; Write type and length
     ld a, \1 | VQUEUE_MODEFLAG_SETMODE
-    ld [hl+], a ;type
+    ld [hl+], a ; type
     ld a, \2
-    ld [hl+], a ;length
+    ld [hl+], a ; length
     xor a
-    ld [hl+], a ;progress
+    ld [hl+], a ; progress
 
-    ;Write destination
+    ; Write destination
     ld a, low(\3)
-    ld [hl+], a ;destination (low)
+    ld [hl+], a ; destination (low)
     ld a, high(\3)
-    ld [hl+], a ;destination (high)
+    ld [hl+], a ; destination (high)
     
-    ;Write fill byte
+    ; Write fill byte
     ld a, \4
     ld [hl+], a
     inc l

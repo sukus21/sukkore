@@ -12,13 +12,13 @@ DEF PALETTE_DEFAULT EQU $E4
 DEF PALETTE_INVERTED EQU $27
 
 
-; The bitmask to apply to `w_fade_state` to get the fading state.
+; The bitmask to apply to `wFadeState` to get the fading state.
 DEF COLOR_FADEM_STATE EQU %11000000
 
-; The bitmask to apply to `w_fade_state` to get the current fade step.
+; The bitmask to apply to `wFadeState` to get the current fade step.
 DEF COLOR_FADEM_STEP EQU %00110000
 
-; The bitmask to apply to `w_fade_state` to get the fade timer.
+; The bitmask to apply to `wFadeState` to get the fade timer.
 DEF COLOR_FADEM_TIMER EQU %0000_1111
 
 ; Fade routine is not active.
@@ -33,10 +33,10 @@ DEF COLOR_FADESTATE_IN EQU %10_000000
 ; Fade routine is fading colors to black.
 DEF COLOR_FADESTATE_OUT EQU %11_000000
 
-; If this bit of `w_fade_state` is set, the fade-routine is running.
+; If this bit of `wFadeState` is set, the fade-routine is running.
 DEF COLOR_FADEB_RUNNING EQU 7
 
-; If the `COLOR_FADEB_RUNNING` bit of `w_fade_state` is set, use this bit to find fade direction.  
+; If the `COLOR_FADEB_RUNNING` bit of `wFadeState` is set, use this bit to find fade direction.  
 ; 0 = fade in.  
 ; 1 = fade out.
 DEF COLOR_FADEB_DIRECTION EQU 6
@@ -53,22 +53,22 @@ MACRO color_t
     dw ((\3) << 10) + ((\2) << 5) + (\1)
 ENDM
 
-;The color that closest matches DMG black.
+; The color that closest matches DMG black.
 MACRO color_dmg_blk
     color_t 0, 0, 0
 ENDM
 
-;The color that closest matches DMG dark gray.
+; The color that closest matches DMG dark gray.
 MACRO color_dmg_dkg
     color_t 7, 7, 7
 ENDM
 
-;The color that closest matches DMG light gray.
+; The color that closest matches DMG light gray.
 MACRO color_dmg_ltg
     color_t 13, 13, 13
 ENDM
 
-;The color that closest matches DMG white.
+; The color that closest matches DMG white.
 MACRO color_dmg_wht
     color_t 31, 31, 31
 ENDM

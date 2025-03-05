@@ -11,58 +11,48 @@ SECTION "INPUT", ROM0
 ;
 ; Saves: `de`, `hl`  
 ; Destroys: `af`, `bc`
-input::
+ReadInput::
 
-    ;Set up for reading the buttons
+    ; Set up for reading the buttons
     ld c, low(rP1)
     ld a, P1F_GET_BTN
     ldh [c], a
     ldh [c], a
     nop 
 
-    ;Read the buttons
-    ldh a, [c]
-    ldh a, [c]
-    ldh a, [c]
-    ldh a, [c]
-    ldh a, [c]
-    ldh a, [c]
-    ldh a, [c]
-    ldh a, [c]
+    ; Read the buttons
+    REPT 8
+        ldh a, [c]
+    ENDR
     and a, %00001111
     ld b, a
 
-    ;Set up for reading the DPAD
+    ; Set up for reading the DPAD
     ld a, P1F_GET_DPAD
     ldh [c], a
     ldh [c], a
     nop 
 
-    ;Read the DPAD
-    ldh a, [c]
-    ldh a, [c]
-    ldh a, [c]
-    ldh a, [c]
-    ldh a, [c]
-    ldh a, [c]
-    ldh a, [c]
-    ldh a, [c]
+    ; Read the DPAD
+    REPT 8
+        ldh a, [c]
+    ENDR
     and a, %00001111
     swap a
     or a, b
     cpl
 
-    ;Get buttons pressed
+    ; Get buttons pressed
     ld b, a
-    ldh a, [h_input]
+    ldh a, [hInput]
     xor a, b
     and a, b
-    ldh [h_input_pressed], a
+    ldh [hInputPressed], a
     ld c, a
     ld a, b
-    ldh [h_input], a
+    ldh [hInput], a
 
-    ;Reset input register and return
+    ; Reset input register and return
     ld a, $FF
     ldh [rP1], a
     ret

@@ -1,7 +1,7 @@
     IF !DEF(MACRO_LYC_INC)
     DEF MACRO_LYC_INC EQU 1
 
-; Sets the bytes at `h_LYC` to the given label.
+; Sets the bytes at `hLYC` to the given label.
 ; Removes the value that was previously there.
 ;
 ; Input:
@@ -10,9 +10,9 @@
 ; Destroys: `a`
 MACRO LYC_set_jumppoint
     ld a, low(\1)
-    ldh [h_LYC+1], a
+    ldh [hLYC+1], a
     ld a, high(\1)
-    ldh [h_LYC+2], a
+    ldh [hLYC+2], a
 ENDM
 
 

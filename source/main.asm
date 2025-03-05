@@ -2,7 +2,7 @@ INCLUDE "hardware.inc/hardware.inc"
 
 
 SECTION "NOTICE", ROM0[$0000]
-rom_message:
+RomMessage:
     db "sukkore", 0
 ;
 
@@ -12,12 +12,12 @@ SECTION "ENTRY POINT", ROM0[$0100]
 ; Entrypoint of the program.  
 ; Do not call manually.  
 ; Lives in ROM0.
-entrypoint:
-    ;Disable interupts and jump
+Entrypoint:
+    ; Disable interupts and jump
     di
-    jp setup
+    jp Setup
 
-    ;Space reserved for the header
+    ; Space reserved for the header
     ds $4C, $00
 ;
 
@@ -29,7 +29,7 @@ SECTION "VBLANK INTERRUPT", ROM0[INT_HANDLER_VBLANK]
 ; Does nothing, as this is not how I detect Vblank.  
 ; Does NOT set IME when returning.  
 ; Lives in ROM0.
-v_vblank::
+VecVblank::
     ret
 ;
 
@@ -39,10 +39,10 @@ SECTION "STAT INTERRUPT", ROM0[INT_HANDLER_STAT]
 
 ; Stat interrupt vector.
 ; Always assumed to be triggered by LY=LYC.
-; Jumps to the routine at `h_LYC`.  
+; Jumps to the routine at `hLYC`.  
 ; Lives in ROM0.
-v_stat::
-    jp h_LYC
+VecSTAT::
+    jp hLYC
 ;
 
 
@@ -52,11 +52,11 @@ SECTION "TIMER INTERRUPT", ROM0[INT_HANDLER_TIMER]
 ; Timer interrupt handler.
 ; Assumed to only be used for benchmarking.  
 ; Lives in ROM0.
-v_timer::
+VecTimer::
     push af
-    ldh a, [h_benchmark]
+    ldh a, [hBenchmark]
     inc a
-    ldh [h_benchmark], a
+    ldh [hBenchmark], a
     pop af
     reti
 ;
@@ -67,9 +67,9 @@ SECTION "METADATA", ROM0
 
 ; Contains information about the current build.  
 ; Lives in ROM0.
-meta_version_string:: db "{__RGBDS_VERSION__}"
-meta_build_time_local:: db __ISO_8601_LOCAL__
-meta_build_time_utc:: db __ISO_8601_UTC__
+MetaVersionString:: db "{__RGBDS_VERSION__}"
+MetaBuildTimeLocal:: db __ISO_8601_LOCAL__
+MetaBuildTimeUTC:: db __ISO_8601_UTC__
 
 
 
@@ -78,17 +78,17 @@ SECTION "MAIN", ROM0
 ; Entrypoint of game code, jumped to after setup is complete.
 ; LCD is off at this point.  
 ; Lives in ROM0.
-main:: 
-    ;Darken all palettes
+Main:: 
+    ; Darken all palettes
     ld a, $FF
-    call set_palette_bgp
-    call set_palette_obp0
-    call set_palette_obp1
+    call PaletteSetBGP
+    call PaletteSetOBP0
+    call PaletteSetOBP1
 
-    ;Enable LCD with a few flags
+    ; Enable LCD with a few flags
     ld a, LCDCF_ON | LCDCF_BLK21 | LCDCF_BGON | LCDCF_WINON
     ldh [rLCDC], a
     
-    ;Go to gameloop
-    jp gameloop_test
+    ; Go to gameloop
+    jp GameloopTest
 ;

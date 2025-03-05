@@ -15,15 +15,15 @@ SECTION "VRAM QUEUE", ROM0
 ; - `hl`: `VQUEUE` pointer
 ;
 ; Saves: `bc`, `de`
-vqueue_get::
-    ld hl, w_vqueue_first
+VQueueGet::
+    ld hl, wVQueueFirst
     ld a, [hl+]
     ld h, [hl]
     ld l, a
     push de
     push hl
 
-    ;Increment this pointer a wee bit
+    ; Increment this pointer a wee bit
     ld a, l
     add a, VQUEUE_T
     ld e, a
@@ -31,25 +31,25 @@ vqueue_get::
     adc a, 0
     ld d, a
 
-    ;Out of bounds check
-    cp a, high(w_vqueue.end)
+    ; Out of bounds check
+    cp a, high(wVQueue.end)
     jr nz, :+
         ld a, e
-        cp a, low(w_vqueue.end)
+        cp a, low(wVQueue.end)
         jr nz, :+
 
-        ;Uh oh, overflow alert
-        ld hl, error_vqueueoverflow
-        rst v_error
+        ; Uh oh, overflow alert
+        ld hl, ErrorVQueueOverflow
+        rst vError
     :
 
-    ;Store this back as the new first slot
-    ld hl, w_vqueue_first
+    ; Store this back as the new first slot
+    ld hl, wVQueueFirst
     ld a, e
     ld [hl+], a
     ld [hl], d
 
-    ;Yes, good, return
+    ; Yes, good, return
     pop hl
     pop de
     ret
@@ -63,8 +63,8 @@ vqueue_get::
 ;
 ; Input:
 ; - `de`: Prepared transfer
-vqueue_enqueue::
-    call vqueue_get
+VQueueEnqueue::
+    call VQueueGet
     ld b, VQUEUE_T
     memcpy_custom hl, de, b
     ret
@@ -82,14 +82,14 @@ vqueue_enqueue::
 ; - `b`: Number of transfers
 ;
 ; Destroys: all
-vqueue_enqueue_multi::
+VQueueEnqueueMulti::
     ld a, b
     or a, a
     ret z
 
-    ;Start loopin' away
+    ; Start loopin' away
     .loop
-    call vqueue_get
+    call VQueueGet
     ld c, VQUEUE_T
     memcpy_custom hl, de, c
     dec b
@@ -103,45 +103,46 @@ vqueue_enqueue_multi::
 ; Lives in ROM0.
 ;
 ; Saves: `c`, `de`
-vqueue_clear::
-    ld hl, w_vqueue
+VQueueClear::
+    ld hl, wVQueue
     ld a, l
-    ld [w_vqueue_first], a
+    ld [wVQueueFirst], a
     ld a, h
-    ld [w_vqueue_first+1], a
+    ld [wVQueueFirst+1], a
     ld b, VQUEUE_QUEUE_SIZE
 
     .loop
 
-    ;Is this a valid entry?
+    ; Is this a valid entry?
     ld a, [hl]
     cp a, VQUEUE_TYPE_NONE
     ret z
 
-    ;Clear this entry
+    ; Clear this entry
     xor a
     REPT VQUEUE_T
         ld [hl+], a
     ENDR
 
-    ;Next entry?
+    ; Next entry?
     dec b
     jr nz, .loop
 
-    ;Nope, this is the end
+    ; Nope, this is the end
     ret
 ;
 
 
 
 ; Checks if vqueue is empty.  
+; Lives in ROM0.
 ;
 ; Returns:
-; - `fZ`: Is empty (z = yes)
+; - `fZ`: is empty (z = yes)
 ;
 ; Destroys: `af`
-vqueue_empty::
-    ld a, [w_vqueue]
+VQueueEmpty::
+    ld a, [wVQueue]
     cp a, VQUEUE_TYPE_NONE
     ret
 ;
@@ -154,91 +155,91 @@ vqueue_empty::
 ; Lives in ROM0.  
 ;
 ; Destroys: all
-vqueue_execute::
-    ;Get type of transfer
-    ld hl, w_vqueue
+VQueueExecute::
+    ; Get type of transfer
+    ld hl, wVQueue
     ld a, [hl+]
     cp a, VQUEUE_TYPE_NONE
     ret z
 
-    ;Set-mode?
+    ; Set-mode?
     bit VQUEUEB_MODEFLAG, a
     jr z, .copymode
         res VQUEUEB_MODEFLAG, a
         cp a, VQUEUE_TYPE_DIRECT
         jr nz, :+
-            call vqueue_set_direct
+            call VQueueSetDirect
             ret z
             jr .finish
         :
 
         cp a, VQUEUE_TYPE_HALFROW
         jr nz, :+
-            call vqueue_set_halfrow
+            call VQueueSetHalfrow
             ret z
             jr .finish
         :
 
         cp a, VQUEUE_TYPE_COLUMN
         jr nz, :+
-            call vqueue_set_column
+            call VQueueSetColumn
             ret z
             jr .finish
         :
 
         cp a, VQUEUE_TYPE_SCREENROW
         jr nz, :+
-            call vqueue_set_screenrow
+            call VQueueSetScreenrow
             ret z
             jr .finish
         :
 
-        ;Transfer type not found
+        ; Transfer type not found
         jr .finish
     ;
 
-    ;Copy-mode
+    ; Copy-mode
     .copymode
         cp a, VQUEUE_TYPE_DIRECT
         jr nz, :+
-            call vqueue_copy_direct
+            call VQueueCopyDirect
             ret z
             jr .finish
         :
 
         cp a, VQUEUE_TYPE_HALFROW
         jr nz, :+
-            call vqueue_copy_halfrow
+            call VQueueCopyHalfrow
             ret z
             jr .finish
         :
 
         cp a, VQUEUE_TYPE_COLUMN
         jr nz, :+
-            call vqueue_copy_column
+            call VQueueCopyColumn
             ret z
             jr .finish
         :
 
         cp a, VQUEUE_TYPE_SCREENROW
         jr nz, :+
-            call vqueue_copy_screenrow
+            call VQueueCopyScreenrow
             ret z
             jr .finish
         :
 
-        ;Type not found
+        ; Type not found
         jr .finish
     ;
 
-    ;Finish a transfer
+    ; Finish a transfer
     .finish
-        ;Set type to none
-        ld hl, w_vqueue + VQUEUE_TYPE
+        ; Set type to none
+        ld hl, wVQueue + VQUEUE_TYPE
         ld [hl], VQUEUE_TYPE_NONE
 
-        ;Perform writeback
-        ld l, low(w_vqueue) + VQUEUE_WRITEBACK
+        ; Perform writeback
+        ld l, low(wVQueue) + VQUEUE_WRITEBACK
         ld a, [hl+]
         ld c, [hl]
         ld [hl], 0
@@ -249,8 +250,8 @@ vqueue_execute::
             inc [hl]
         :
 
-        ;Move to last queued transfer
-        ld hl, w_vqueue_first
+        ; Move to last queued transfer
+        ld hl, wVQueueFirst
         ld a, [hl+]
         sub a, VQUEUE_T
         jr nc, :+
@@ -262,13 +263,13 @@ vqueue_execute::
         ld h, a
         ld l, c
 
-        ;Transfer exists?
+        ; Transfer exists?
         ld a, [hl]
         cp a, VQUEUE_TYPE_NONE
         ret z
 
-        ;Copy transfer to first slot
-        ld bc, w_vqueue
+        ; Copy transfer to first slot
+        ld bc, wVQueue
         ld [bc], a
         inc c
         ld a, VQUEUE_TYPE_NONE
@@ -279,32 +280,32 @@ vqueue_execute::
             inc c
         ENDR
 
-        ;Do we have time to start this transfer?
+        ; Do we have time to start this transfer?
         ldh a, [rLY]
         cp a, VQUEUE_ITERATION_TIME
-        jp c, vqueue_execute
+        jp c, VQueueExecute
     ;
 
-    ;Return
+    ; Return
     ret 
 ;
 
 
 
 MACRO vqueue_copy_start
-    ;Get length remaining
+    ; Get length remaining
     ld a, [hl+]
-    ld d, a ;length total -> D
+    ld d, a ; length total -> D
     ld a, [hl+]
-    ld e, a ;progress -> E
+    ld e, a ; progress -> E
 
-    ;Get destination -> BC
+    ; Get destination -> BC
     ld a, [hl+]
     ld c, a
     ld a, [hl+]
     ld b, a
 
-    ;Get source -> HL
+    ; Get source -> HL
     ld a, [hl+]
     ld [rROMB0], a
     ld a, [hl+]
@@ -315,16 +316,16 @@ MACRO vqueue_copy_start
 ENDM
 
 MACRO vqueue_copy_end
-    ;Is it over?
+    ; Is it over?
     inc e
     ld a, e
     sub a, d
     jr nz, :+
-        inc a ;reset Z-flag
+        inc a ; reset Z-flag
         ret
     :
 
-    ;Time for another iteration?
+    ; Time for another iteration?
     ldh a, [rLY]
     cp a, VQUEUE_ITERATION_TIME
     IF @ - .loop > 127
@@ -333,45 +334,45 @@ MACRO vqueue_copy_end
         jr c, .loop
     ENDC
 
-    ;Time is up
-    ;Save transfer completion count
+    ; Time is up
+    ; Save transfer completion count
     ld a, e
     ld d, h
     ld e, l
-    ld hl, w_vqueue + VQUEUE_PROGRESS
+    ld hl, wVQueue + VQUEUE_PROGRESS
     ld [hl+], a
 
-    ;Save destination
+    ; Save destination
     ld a, c
     ld [hl+], a
     ld a, b
     ld [hl+], a
 
-    ;Save source
+    ; Save source
     inc hl
     ld a, e
     ld [hl+], a
     ld [hl], d
 
-    ;Return
-    xor a ;sets Z-flag
+    ; Return
+    xor a ; sets Z-flag
     ret
 ENDM
 
 MACRO vqueue_set_start
-    ;Get length remaining
+    ; Get length remaining
     ld a, [hl+]
-    ld d, a ;length total -> D
+    ld d, a ; length total -> D
     ld a, [hl+]
-    ld e, a ;progress -> E
+    ld e, a ; progress -> E
 
-    ;Get destination -> BC
+    ; Get destination -> BC
     ld a, [hl+]
     ld c, a
     ld a, [hl+]
     ld b, a
 
-    ;Get source -> A, move destination to HL
+    ; Get source -> A, move destination to HL
     ld a, [hl]
     ld h, b
     ld l, c
@@ -382,16 +383,16 @@ MACRO vqueue_set_start
 ENDM
 
 MACRO vqueue_set_end
-    ;Is it over?
+    ; Is it over?
     inc e
     ld a, e
-    sub a, d ;set A to 0 if Z flag
+    sub a, d ; set A to 0 if Z flag
     jr nz, :+
-        inc a ;reset Z-flag
+        inc a ; reset Z-flag
         ret
     :
 
-    ;Time for another iteration?
+    ; Time for another iteration?
     ldh a, [rLY]
     cp a, VQUEUE_ITERATION_TIME
     IF @ - .loop > 127
@@ -400,36 +401,36 @@ MACRO vqueue_set_end
         jr c, .loop
     ENDC
 
-    ;Time is up
-    ;Save transfer completion count
+    ; Time is up
+    ; Save transfer completion count
     ld b, h
     ld c, l
-    ld hl, w_vqueue + VQUEUE_PROGRESS
+    ld hl, wVQueue + VQUEUE_PROGRESS
     ld a, e
     ld [hl+], a
 
-    ;Save destination
+    ; Save destination
     ld a, c
     ld [hl+], a
     ld a, b
     ld [hl+], a
 
-    ;Return
-    xor a ;sets Z-flag
+    ; Return
+    xor a ; sets Z-flag
     ret
 ENDM
 
 
 
-; Subroutine for `vqueue_execute`.  
-; Same notes as `vqueue_execute`.
+; Subroutine for `VQueueExecute`.  
+; Same notes as `VQueueExecute`.
 ;
 ; Input:
 ; - `hl`: `VQUEUE` pointer, at `VQUEUE_LENGTH`
 ;
 ; Returns:
 ; - `fZ`: Transfer ended early
-vqueue_copy_direct:
+VQueueCopyDirect:
     vqueue_copy_start
     REPT 16
         ld a, [hl+]
@@ -441,15 +442,15 @@ vqueue_copy_direct:
 
 
 
-; Subroutine for `vqueue_execute`.  
-; Same notes as `vqueue_execute`.
+; Subroutine for `VQueueExecute`.  
+; Same notes as `VQueueExecute`.
 ;
 ; Input:
 ; - `hl`: `VQUEUE` pointer, at `VQUEUE_LENGTH`
 ;
 ; Returns:
 ; - `fZ`: Transfer ended early
-vqueue_set_direct:
+VQueueSetDirect:
     vqueue_set_start
     REPT 16
         ld [hl+], a
@@ -459,15 +460,15 @@ vqueue_set_direct:
 
 
 
-; Subroutine for `vqueue_execute`.  
-; Same notes as `vqueue_execute`.
+; Subroutine for `VQueueExecute`.  
+; Same notes as `VQueueExecute`.
 ;
 ; Input:
 ; - `hl`: `VQUEUE` pointer, at `VQUEUE_LENGTH`
 ;
 ; Returns:
 ; - `fZ`: Transfer ended early
-vqueue_copy_halfrow:
+VQueueCopyHalfrow:
     vqueue_copy_start
     REPT 16
         ld a, [hl+]
@@ -475,7 +476,7 @@ vqueue_copy_halfrow:
         inc bc
     ENDR
 
-    ;Move destination pointer
+    ; Move destination pointer
     ld a, c
     add a, 16
     ld c, a
@@ -488,21 +489,21 @@ vqueue_copy_halfrow:
 
 
 
-; Subroutine for `vqueue_execute`.  
-; Same notes as `vqueue_execute`.
+; Subroutine for `VQueueExecute`.  
+; Same notes as `VQueueExecute`.
 ;
 ; Input:
 ; - `hl`: `VQUEUE` pointer, at `VQUEUE_LENGTH`
 ;
 ; Returns:
 ; - `fZ`: Transfer ended early
-vqueue_set_halfrow:
+VQueueSetHalfrow:
     vqueue_set_start
     REPT 16
         ld [hl+], a
     ENDR
 
-    ;Move destination pointer
+    ; Move destination pointer
     ld a, l
     add a, 16
     ld l, a
@@ -515,15 +516,15 @@ vqueue_set_halfrow:
 
 
 
-; Subroutine for `vqueue_execute`.  
-; Same notes as `vqueue_execute`.
+; Subroutine for `VQueueExecute`.  
+; Same notes as `VQueueExecute`.
 ;
 ; Input:
 ; - `hl`: `VQUEUE` pointer, at `VQUEUE_LENGTH`
 ;
 ; Returns:
 ; - `fZ`: Transfer ended early
-vqueue_copy_column:
+VQueueCopyColumn:
     vqueue_copy_start
     push bc
     REPT 32
@@ -537,7 +538,7 @@ vqueue_copy_column:
         :
     ENDR
 
-    ;Move destination pointer
+    ; Move destination pointer
     pop bc
     inc bc
     
@@ -546,15 +547,15 @@ vqueue_copy_column:
 
 
 
-; Subroutine for `vqueue_execute`.  
-; Same notes as `vqueue_execute`.
+; Subroutine for `VQueueExecute`.  
+; Same notes as `VQueueExecute`.
 ;
 ; Input:
 ; - `hl`: `VQUEUE` pointer, at `VQUEUE_LENGTH`
 ;
 ; Returns:
 ; - `fZ`: Transfer ended early
-vqueue_set_column:
+VQueueSetColumn:
     vqueue_set_start
     push bc
     REPT 32
@@ -567,7 +568,7 @@ vqueue_set_column:
         :
     ENDR
 
-    ;Move destination pointer
+    ; Move destination pointer
     pop hl
     inc hl
     
@@ -576,15 +577,15 @@ vqueue_set_column:
 
 
 
-; Subroutine for `vqueue_execute`.  
-; Same notes as `vqueue_execute`.
+; Subroutine for `VQueueExecute`.  
+; Same notes as `VQueueExecute`.
 ;
 ; Input:
 ; - `hl`: `VQUEUE` pointer, at `VQUEUE_LENGTH`
 ;
 ; Returns:
 ; - `fZ`: Transfer ended early
-vqueue_copy_screenrow:
+VQueueCopyScreenrow:
     vqueue_copy_start
     REPT 20
         ld a, [hl+]
@@ -592,7 +593,7 @@ vqueue_copy_screenrow:
         inc bc
     ENDR
 
-    ;Move destination pointer
+    ; Move destination pointer
     ld a, c
     add a, 12
     ld c, a
@@ -605,21 +606,21 @@ vqueue_copy_screenrow:
 
 
 
-; Subroutine for `vqueue_execute`.  
-; Same notes as `vqueue_execute`.
+; Subroutine for `VQueueExecute`.  
+; Same notes as `VQueueExecute`.
 ;
 ; Input:
 ; - `hl`: `VQUEUE` pointer, at `VQUEUE_LENGTH`
 ;
 ; Returns:
 ; - `fZ`: Transfer ended early
-vqueue_set_screenrow:
+VQueueSetScreenrow:
     vqueue_set_start
     REPT 20
         ld [hl+], a
     ENDR
 
-    ;Move destination pointer
+    ; Move destination pointer
     ld a, l
     add a, 12
     ld l, a

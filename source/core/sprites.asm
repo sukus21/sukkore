@@ -14,15 +14,15 @@ SECTION "SPRITES", ROM0
 ; - `hl`: Pointer to sprite slot(s)
 ;
 ; Saves: `bc`, `de`, `h`
-sprite_get::
+SpriteGet::
 
-    ;Allocate B amount of sprites
+    ; Allocate B amount of sprites
     ld l, OAMMIRROR_COUNT
     ld a, [hl]
     add a, b
     ld [hl], a
 
-    ;Rewind pointer and return
+    ; Rewind pointer and return
     sub a, b
     ld l, a
     ret 
@@ -38,22 +38,22 @@ sprite_get::
 ;
 ; Destroys: `l`  
 ; Saves: `bc`, `de`
-sprite_finish::
+SpriteFinish::
 
-    ;Get pointer to first unused sprite
+    ; Get pointer to first unused sprite
     ld l, OAMMIRROR_PREVIOUS
     ld a, [hl-]
-    ld l, [hl] ;hl = OAMMIR_COUNT
+    ld l, [hl] ; hl = OAMMIR_COUNT
 
-    ;Cap-fiddling, prevents errors
+    ; Cap-fiddling, prevents errors
     cp a, l
     jr z, .done
-    or a ;cp a, 0
+    or a ; cp a, 0
     jr nz, :+
         ld a, $A0
     :
 
-    ;Clear out memory
+    ; Clear out memory
     .loop
         ld [hl], 0
         inc l
@@ -61,7 +61,7 @@ sprite_finish::
         jr nc, .loop
     .done
 
-    ;Reset sprite count and return
+    ; Reset sprite count and return
     ld l, OAMMIRROR_COUNT
     ld a, [hl+]
     ld [hl-], a

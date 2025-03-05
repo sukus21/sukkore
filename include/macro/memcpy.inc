@@ -15,8 +15,8 @@ MACRO memcpy_custom
     STATIC_ASSERT STRCMP(STRLWR("\1"), STRLWR("\3")) != 0, "memcpy - register \1 cannot be used multiple times"
     STATIC_ASSERT STRCMP(STRLWR("\2"), STRLWR("\3")) != 0, "memcpy - register \2 cannot be used multiple times"
 
-    .memcpy_custom_\@
-    ;Read source
+    .memcpyCustom\@
+    ; Read source
     IF STRCMP(STRLWR("\2"), "hl") == 0
         ld a, [hl+]
     ELSE
@@ -24,7 +24,7 @@ MACRO memcpy_custom
         inc \2
     ENDC
 
-    ;Write to destination
+    ; Write to destination
     IF STRCMP(STRLWR("\1"), "hl") == 0
         ld [hl+], a
     ELSE
@@ -32,7 +32,7 @@ MACRO memcpy_custom
         inc \1
     ENDC
 
-    ;Decrement counter
+    ; Decrement counter
     dec \3
     IF STRCMP(STRLWR("\3"), "bc") == 0
         ld a, b
@@ -46,7 +46,7 @@ MACRO memcpy_custom
         ld a, h
         or a, l
     ENDC
-    jr nz, .memcpy_custom_\@
+    jr nz, .memcpyCustom\@
 ENDM
 
 
@@ -65,7 +65,7 @@ MACRO memcpy_label
     ELSE
         ld de, \1.end - \1
     ENDC
-    call memcpy
+    call Memcpy
 ENDM
 
     ENDC

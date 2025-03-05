@@ -9,12 +9,12 @@ SECTION "PAINTER", ROM0
 ; Lives in ROM0.
 ;
 ; Saves: `f`, `bc`, `de`, `hl`
-painter_reset::
+PainterReset::
     push hl
-    ld hl, w_painter_position
-    ld a, low(w_paint)
+    ld hl, wPainterPosition
+    ld a, low(wPaint)
     ld [hl+], a
-    ld [hl], high(w_paint)
+    ld [hl], high(wPaint)
     pop hl
     ret
 ;
@@ -30,7 +30,7 @@ painter_reset::
 ; - `de`: Length in bytes
 ;
 ; Saves: `bc`, `de`, `hl`
-painter_fill::
+PainterFill::
     ld a, d
     or a, e
     ret z
@@ -38,20 +38,20 @@ painter_fill::
     push de
     push hl
 
-    ;Do some copyin'
-    ld hl, w_painter_position
+    ; Do some copyin'
+    ld hl, wPainterPosition
     ld a, [hl+]
     ld h, [hl]
     ld l, a
-    call memcpy
+    call Memcpy
 
-    ;Save pointer
+    ; Save pointer
     ld a, l
-    ld [w_painter_position], a
+    ld [wPainterPosition], a
     ld a, h
-    ld [w_painter_position+1], a
+    ld [wPainterPosition+1], a
 
-    ;Return
+    ; Return
     pop hl
     pop de
     pop bc
@@ -70,7 +70,7 @@ painter_fill::
 ; - `de`: Length in bytes
 ;
 ; Saves: `de`, `hl`
-painter_paint::
+PainterPaint::
     res 0, e
     ld a, d
     or a, e
@@ -78,19 +78,19 @@ painter_paint::
     push de
     push hl
 
-    ;Get current pointer position
-    ld hl, w_painter_position
+    ; Get current pointer position
+    ld hl, wPainterPosition
     ld a, [hl+]
     ld h, [hl]
     ld l, a
 
     .loop
-        ;Decrement counter and save it
+        ; Decrement counter and save it
         dec de
         dec e
         push de
 
-        ;Read source -> DE
+        ; Read source -> DE
         ld a, [bc]
         inc bc
         ld d, a
@@ -99,9 +99,9 @@ painter_paint::
         inc bc
         push bc
 
-        ;Create counter -> C
+        ; Create counter -> C
         ld c, 8
-        .loop_inner
+        .loopInner
             bit 0, d
             jr nz, .place
             bit 0, e
@@ -127,10 +127,10 @@ painter_paint::
             rlc [hl]
             dec l
             dec c
-            jr nz, .loop_inner
+            jr nz, .loopInner
         ;
 
-        ;One iteration over
+        ; One iteration over
         inc l
         inc hl
         pop bc
@@ -140,13 +140,13 @@ painter_paint::
         jr nz, .loop
     ;
 
-    ;Save pointer
+    ; Save pointer
     ld a, l
-    ld [w_painter_position], a
+    ld [wPainterPosition], a
     ld a, h
-    ld [w_painter_position+1], a
+    ld [wPainterPosition+1], a
 
-    ;Return
+    ; Return
     pop hl
     pop de
     ret
@@ -161,7 +161,7 @@ painter_paint::
 ; - `de`: Length in bytes
 ;
 ; Saves: `bc`, `de`, `hl`
-painter_clear::
+PainterClear::
     ld a, d
     or a, e
     ret z
@@ -169,13 +169,13 @@ painter_clear::
     push de
     push hl
 
-    ;Get buffer position
-    ld hl, w_painter_position
+    ; Get buffer position
+    ld hl, wPainterPosition
     ld a, [hl+]
     ld h, [hl]
     ld l, a
 
-    ;Start going
+    ; Start going
     .loop
         xor a
         ld [hl+], a
@@ -185,13 +185,13 @@ painter_clear::
         jr nz, .loop
     ;
 
-    ;Save pointer
+    ; Save pointer
     ld a, l
-    ld [w_painter_position], a
+    ld [wPainterPosition], a
     ld a, h
-    ld [w_painter_position+1], a
+    ld [wPainterPosition+1], a
 
-    ;Return
+    ; Return
     pop hl
     pop de
     pop bc
