@@ -129,6 +129,21 @@ VarH:
         hColBuf1:: ds 4
         hColBuf2:: ds 4
 
+        ; Sprite template attributes
+        hSpriteAttr:: ds 1
+
+        ; Sprite template bitmask
+        hSpriteBits:: ds 1
+
+        ; Sprite template loop counter
+        hSpriteIter:: ds 1
+
+        ; Sprite template X-delta
+        hSpriteXdelta:: ds 1
+
+        ; Sprite template Y-delta
+        hSpriteYdelta:: ds 1
+
         ; Run OAM DMA with a pre-specified input.  
         ; Interrupts should be disabled while this runs.  
         ; Assumes OAM access.

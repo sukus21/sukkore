@@ -68,3 +68,175 @@ SpriteFinish::
     ld [hl], 0
     ret 
 ;
+
+
+
+; Draw a sprite using the given sprite template.  
+; Lives in ROM0.
+;
+; Input:
+; - `a`: Sprite attributes
+; - `b`: Sprite X
+; - `c`: Sprite Y
+; - `de`: Template pointer
+; - `h`: High-byte of OAM mirror pointer
+;
+; Saves: none
+SpriteDrawTemplate::
+    push hl
+    ld l, a
+    ldh [hSpriteAttr], a
+
+    ; Adjust X-position
+    ld a, b
+    sub a, 8
+    ld b, a
+
+    ; Handle mirroring
+    ld a, 8
+    bit OAMB_XFLIP, l
+    jr z, :+
+        ld a, b
+        add a, 24
+        ld b, a
+        ld a, -8
+    :
+    ldh [hSpriteXdelta], a
+
+    ; Handle flipping
+    ld a, 16 ; TODO: 8x16 or 8x8 mode
+    bit OAMB_YFLIP, l
+    jr z, :+
+        add a, c
+        ld c, a
+        ld a, -16
+    :
+    ldh [hSpriteYdelta], a
+    pop hl
+    push bc
+
+    ; How many sprites do we need to allocate?
+    ld a, [de]
+    inc de
+    ldh [hSpriteBits], a
+    ld c, a
+    xor a ; reset carry flag
+    ld b, a
+    ldh [hSpriteIter], a
+    REPT 8
+        sla c
+        adc a, b
+    ENDR
+    
+    ; Allocate sprites -> HL
+    add a, a
+    add a, a
+    ld b, a
+    call SpriteGet
+
+    ; Begin writing sprite data
+    pop bc
+    .loop
+        ldh a, [hSpriteBits]
+        sla a
+        ldh [hSpriteBits], a
+        jr c, :+
+            ret z
+            jr .nextSprite
+        :
+
+        ; Write X and Y position
+        ld a, c
+        ld [hl+], a
+        ld a, b
+        ld [hl+], a
+        push bc
+
+        ; Sprite tile
+        ld a, [de]
+        inc de
+        ld [hl+], a
+
+        ; Sprite attributes
+        ld a, [de]
+        inc de
+        ld b, a
+        ldh a, [hSpriteAttr]
+        xor a, b
+        ld [hl+], a
+        pop bc
+
+        ; Scoot X-position over for the next sprite
+        .nextSprite
+        ldh a, [hSpriteXdelta]
+        add a, b
+        ld b, a
+        ldh a, [hSpriteIter]
+        inc a
+        ldh [hSpriteIter], a
+        
+        ; Reset X and increment Y
+        cp a, 4
+        jr nz, .loop
+            ldh a, [hSpriteXdelta]
+            add a, a
+            add a, a
+            cpl a
+            inc a
+            add a, b
+            ld b, a
+            ldh a, [hSpriteYdelta]
+            add a, c
+            ld c, a
+            jr .loop
+        ;
+    ;
+;
+
+
+
+; Copies a sprite template to a RAM location, while modifying it.  
+; Lives in ROM0.
+;
+; Input:
+; - `b`: Tile offset
+; - `c`: Attribute change
+; - `de`: Destination
+; - `hl`: Source
+;
+; Saves: `bc`
+SpriteModifyTemplate::
+    push bc
+
+    ; How many entries to copy?
+    ld a, [hl+]
+    ld c, a
+    xor a
+    ld b, a
+    REPT 8
+        sla c
+        adc a, b
+    ENDR
+    pop bc
+    ret z
+    ldh [hSpriteIter], a
+
+    ; Copy data
+    .loop
+        ld a, [hl+]
+        add a, b
+        ld [de], a
+        inc de
+        ld a, [hl+]
+        xor a, c
+        ld [de], a
+        inc de
+
+        ; End of loop?
+        ldh a, [hSpriteIter]
+        dec a
+        ret z
+        ldh [hSpriteIter], a
+        jr .loop
+    ;
+;
