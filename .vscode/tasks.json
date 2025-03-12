@@ -7,7 +7,7 @@
             "label": "build",
             "detail": "build ROM",
             "type": "shell",
-            "command": "python",
+            "command": "python3",
             "args": [
                 "build.py"
             ],
@@ -23,7 +23,7 @@
         {
             "label": "rebuild",
             "detail": "rebuild ROM from scratch",
-            "command": "python",
+            "command": "python3",
             "args": [
                 "build.py",
                 "--rebuild"
@@ -41,7 +41,7 @@
             "label": "clean",
             "detail": "cleans up build dir",
             "type": "shell",
-            "command": "python",
+            "command": "python3",
             "args": [
                 "clean.py"
             ],
