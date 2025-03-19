@@ -20,7 +20,7 @@ SECTION "ERROR SCREEN LOADER", ROM0
 ; Could not fit in vector table.
 ; Lives in ROM0.
 ErrorStart:
-    ld [wBuffer+0], a
+    ld [wRegisterCacheA], a
     ld a, bank(GameloopError)
     ld [rROMB0], a
     jp GameloopError
@@ -140,18 +140,18 @@ GameloopError:
     ; Save A, HL and SP temporarily
     ; A was previously saved
     ld a, h
-    ld [wBuffer + 6], a
+    ld [wRegisterCacheH], a
     ld a, l
-    ld [wBuffer + 7], a
+    ld [wRegisterCacheL], a
+    ld [wRegisterCacheSP + 1], sp
+    ld a, [wRegisterCacheSP + 2]
+    ld [wRegisterCacheSP], a
     pop hl
-    ld [wBuffer + 9], sp
-    ld a, [wBuffer + 10]
-    ld [wBuffer + 8], a
 
     ; Save AF
-    ld sp, wBuffer + 3
-    ld hl, sp - 1
+    ld sp, wRegisterCacheF + 2
     push af
+    ld hl, sp + 1
 
     ; Save BC and DE
     ld a, b
@@ -235,7 +235,7 @@ GameloopError:
 
     ; Copy register view to _SCRN1
     ld hl, $9BFF
-    ld de, wBuffer
+    ld de, wRegisterCache
     ld bc, "a"<<8 | "f"
     call ErrorNumberToScreen
     ld bc, "b"<<8 | "c"
@@ -250,9 +250,9 @@ GameloopError:
     call ErrorNumberToScreen
 
     ; Check old HL value
-    ld a, [wBuffer+6]
+    ld a, [wRegisterCacheH]
     ld h, a
-    ld a, [wBuffer+7]
+    ld a, [wRegisterCacheL]
     ld l, a
 
     ; Check values at this position
@@ -697,4 +697,19 @@ ErrorMessages:
     ErrorColorRequired::   create_message "ONLY PLAYS ON CGB"
     ErrorVQueueOverflow::  create_message "VQUEUE OVERFLOW"
     POPC
+;
+
+
+
+SECTION UNION "WRAMX BUFFER", WRAMX, ALIGN[8]
+    wRegisterCache:
+    wRegisterCacheA: ds 1
+    wRegisterCacheF: ds 1
+    wRegisterCacheB: ds 1
+    wRegisterCacheC: ds 1
+    wRegisterCacheD: ds 1
+    wRegisterCacheE: ds 1
+    wRegisterCacheH: ds 1
+    wRegisterCacheL: ds 1
+    wRegisterCacheSP: ds 3
 ;

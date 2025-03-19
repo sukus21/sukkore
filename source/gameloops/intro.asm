@@ -58,6 +58,11 @@ IntroTileset:
 ; Destroys: all
 Intro::
 
+    ; Initialize vars
+    xor a
+    ld [wIntroState], a
+    ld [wIntroTimer], a
+
     ; Wait for VBLANK
     xor a
     ldh [rIF], a
@@ -192,9 +197,9 @@ IntroFadeIn:
 
     ; Set default DMG palettes
     ld a, %11100100
-    ld [wBuffer], a
+    ld [wIntroPaletteDmg0], a
     ld a, %10010000
-    ld [wBuffer+1], a
+    ld [wIntroPaletteDmg1], a
 
     ; Fade in
     .fadeIn
@@ -305,7 +310,7 @@ IntroFading:
         ld d, a
         ldh a, [rOBP0]
         ld e, a
-        ld hl, wBuffer ; stores DMG palette
+        ld hl, wIntroPaletteDmg0 ; stores DMG palette
         ld a, [wIntroState]
         cp a, 1
         jr z, .fadeOut
@@ -349,7 +354,7 @@ IntroFading:
     ; CGB mode
     .isCGB
         ld a, c
-        ld de, wBuffer
+        ld de, wIntroPaletteCgb0
         bit 0, b
         jr nz, .gbCompo
 
@@ -376,12 +381,12 @@ IntroFading:
             
             ; Copy palettes
             ld e, c ; save this from being clobbered
-            ld hl, wBuffer
+            ld hl, wIntroPaletteCgb0
             xor a
             call PaletteCopyBG
             call PaletteCopyBG
             xor a
-            ld hl, wBuffer + $08
+            ld hl, wIntroPaletteDgb1
             call PaletteCopyOBJ
 
             ; Return
@@ -406,11 +411,11 @@ IntroFading:
 
             ; Apply palettes
             ld e, c
-            ld hl, wBuffer
+            ld hl, wIntroPaletteCgb0
             xor a
             call PaletteCopyBG
             xor a
-            ld l, low(wBuffer)
+            ld hl, wIntroPaletteCgb0
             call PaletteCopyOBJ
 
             ; Return
@@ -495,4 +500,24 @@ MapCopyScreen:
 
     ; Return
     ret
+;
+
+
+
+SECTION UNION "WRAMX BUFFER", WRAMX, ALIGN[8]
+    UNION
+        wIntroPaletteDmg0: ds 1
+        wIntroPaletteDmg1: ds 1
+    NEXTU
+        wIntroPaletteCgb0: ds 8
+        wIntroPaletteDgb1: ds 8
+    ENDU
+
+    ; Intro state.
+    ; Only used in `source/intro.asm`.
+    wIntroState: ds 0
+
+    ; Intro timer.
+    ; Only used in `source/intro.asm`.
+    wIntroTimer: ds 0
 ;

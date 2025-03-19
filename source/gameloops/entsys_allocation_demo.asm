@@ -46,10 +46,12 @@ GameloopTest::
 
     ; Initialize a few variables
     xor a
-    ld hl, wBuffer+128
-    ld [hl+], a
-    ld [hl+], a
-    ld [hl+], a
+    ld [wAllocationDemoX], a
+    ld [wAllocationDemoY], a
+    ld [wAllocationDemoSize], a
+    ld [wAllocationDemoCounter], a
+    dec a
+    ld [wAllocationDemoPerformance], a
 
     ; Clear OAM
     ld a, high(wOAM)
@@ -72,7 +74,7 @@ GameloopTest::
     call ReadInput
 
     ; Select what allocation mode to do
-    ld hl, wBuffer+130
+    ld hl, wAllocationDemoSize
     ld a, [hl]
     bit PADB_SELECT, c
     jr z, :+
@@ -109,7 +111,7 @@ GameloopTest::
     jr z, .noAlloc
         ld c, 1
         call WaitScanline
-        ld a, [wBuffer+130]
+        ld a, [wAllocationDemoSize]
         cp a, 0
         jr nz, :+
             call EntsysNew64
@@ -130,13 +132,13 @@ GameloopTest::
         ld a, 1
         ld [bc], a
         ldh a, [rLY]
-        ld [wBuffer+131], a
+        ld [wAllocationDemoPerformance], a
     .noAlloc
 
     ; Free entities
     ldh a, [hInputPressed]
     ld b, a
-    ld hl, wBuffer+128
+    ld hl, wAllocationDemoX
     ld a, [hl+]
     ld d, a ; x-axis
     ld e, [hl] ; y-axis
@@ -206,12 +208,12 @@ GameloopTest::
         ld h, a
         call EntsysFree
         ldh a, [rLY]
-        ld [wBuffer+131], a
+        ld [wAllocationDemoPerformance], a
     .noFree
 
     ; Get quick status of all entities
     ld hl, wEntsys
-    ld de, wBuffer
+    ld de, wAllocationDemoStatus
     .entityLoop
         ; Is slot enabled?
         ld a, [hl+]
@@ -260,7 +262,7 @@ GameloopTest::
     memcpy_custom hl, de, b
 
     ; Create sprites for performance metric
-    ld a, [wBuffer+131]
+    ld a, [wAllocationDemoPerformance]
     num_to_hex a, d, e
     ld b, 8
     ld h, high(wOAM)
@@ -288,7 +290,7 @@ GameloopTest::
 
     ; Copy entity status to tilemap
     ld hl, VM_ENTALLOC_CHUNKS
-    ld de, wBuffer
+    ld de, wAllocationDemoStatus
     .vramLoop
         ld a, [de]
         inc de
@@ -324,3 +326,14 @@ GameloopTest::
     call hDMA
     jp .loop
 ;
+
+
+
+SECTION UNION "WRAMX BUFFER", WRAMX, ALIGN[8]
+
+wAllocationDemoStatus: ds 128
+wAllocationDemoX: ds 1
+wAllocationDemoY: ds 1
+wAllocationDemoSize: ds 1
+wAllocationDemoPerformance: ds 1
+wAllocationDemoCounter:: ds 1

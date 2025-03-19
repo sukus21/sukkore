@@ -65,17 +65,6 @@ VarW0:
     LOAD "WRAM0 INITIALIZED", WRAM0, ALIGN[8]
         wVariables:
 
-        ; 256 bytes of memory that can be used for anything.
-        wBuffer:: ds 256
-
-        ; Intro state.
-        ; Only used in `source/intro.asm`.
-        wIntroState:: db $00
-
-        ; Intro timer.
-        ; Only used in `source/intro.asm`.
-        wIntroTimer:: db $00
-
         ; Stack-position to exit an entity's gameloop.
         wEntsysExit:: dw $0000
 
@@ -229,6 +218,14 @@ SECTION "WRAMX UNINITIALIZED", WRAMX, ALIGN[8]
 
     ; Paint buffer.
     wPaint:: ds $400
+;
+
+
+
+SECTION UNION "WRAMX BUFFER", WRAMX, ALIGN[8]
+
+    ; 256 bytes of memory that can be used for anything.
+    wBuffer: ds 256
 ;
 
 
