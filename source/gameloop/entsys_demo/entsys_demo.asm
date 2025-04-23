@@ -1,14 +1,14 @@
 INCLUDE "hardware.inc/hardware.inc"
 INCLUDE "macro/memcpy.inc"
 INCLUDE "macro/numtohex.inc"
-INCLUDE "struct/vqueue.inc"
-INCLUDE "struct/vram/entsys_allocation_demo.inc"
+INCLUDE "vqueue/vqueue.inc"
+INCLUDE "gameloop/entsys_demo/vram.inc"
 
 SECTION "TESTLOOP DATA", ROMX
 
 TestloopFont:
-    INCBIN "font.tls"
-    INCBIN "testing_entityslots.tls"
+    INCBIN "gameloop/entsys_demo/font.tls"
+    INCBIN "gameloop/entsys_demo/chunks.tls"
 .end
 
 TestloopStr:

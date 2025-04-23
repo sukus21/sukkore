@@ -39,13 +39,13 @@ IntroPalettes:
 ; Tilemap data for logo. 
 ; Contains a DMG- and CGB version.
 IntroTilemap:
-    .cgb INCBIN "intro/sukus_cgb.tlm"
-    .dmg INCBIN "intro/sukus_dmg.tlm"
+    .cgb INCBIN "gameloop/intro/sukus_cgb.tlm"
+    .dmg INCBIN "gameloop/intro/sukus_dmg.tlm"
 ;
 
 ; Tileset for logo and font.
 IntroTileset:
-    INCBIN "intro/intro.tls"
+    INCBIN "gameloop/intro/intro.tls"
 .end
 
 

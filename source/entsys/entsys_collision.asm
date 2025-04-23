@@ -1,4 +1,4 @@
-INCLUDE "entsys.inc"
+INCLUDE "entsys/entsys.inc"
 INCLUDE "macro/relpointer.inc"
 
 SECTION "ENTSYS COLLISION", ROM0

@@ -30,7 +30,7 @@ def assembleFile(srcPath):
 
     # Assemble file
     os.makedirs(os.path.dirname(objPath), exist_ok=True)
-    args = ["rgbasm", "-p", "255", "-i", "include", "-o", objPath, srcPath]
+    args = ["rgbasm", "-p", "255", "-i", "source", "-o", objPath, srcPath]
     print(" ".join(escapeCli(args)))
     result = cmd.run(args, stdout=sys.stdout, stderr=sys.stderr)
 

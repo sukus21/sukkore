@@ -1,5 +1,5 @@
 INCLUDE "hardware.inc/hardware.inc"
-INCLUDE "struct/vqueue.inc"
+INCLUDE "vqueue/vqueue.inc"
 
 ; What tile to start drawing from
 DEF RECTANGLE_TILES EQU $E0

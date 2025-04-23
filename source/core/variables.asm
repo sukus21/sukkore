@@ -1,9 +1,9 @@
 INCLUDE "hardware.inc/hardware.inc"
-INCLUDE "entsys.inc"
+INCLUDE "entsys/entsys.inc"
 INCLUDE "macro/color.inc"
 INCLUDE "macro/memcpy.inc"
 INCLUDE "struct/oam_mirror.inc"
-INCLUDE "struct/vqueue.inc"
+INCLUDE "vqueue/vqueue.inc"
 
 SECTION "DMA INIT", ROM0
 

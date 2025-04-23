@@ -62,19 +62,19 @@ Sine:
 
 
 ; Background tileset
-ErrorTiles: INCBIN "errorscreen/face.tls"
+ErrorTiles: INCBIN "gameloop/error/face.tls"
 .end
 
 ; Sprite tiles
-ErrorSprites: INCBIN "errorscreen/sprites.tls"
+ErrorSprites: INCBIN "gameloop/error/sprites.tls"
 .end
 
 ; Font tiles
-ErrorFont: INCBIN "errorscreen/font.tls"
+ErrorFont: INCBIN "gameloop/error/font.tls"
 .end
 
 ; Tilemap data
-ErrorMap: INCBIN "errorscreen/tilemap.tlm"
+ErrorMap: INCBIN "gameloop/error/face.tlm"
 .end
 
 ; Sprite initialization data

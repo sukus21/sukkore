@@ -3,6 +3,6 @@
         "editor.autoIndent": "keep"
     },
     "rgbdsz80.includePath": [
-        "include"
+        "source"
     ]
 }

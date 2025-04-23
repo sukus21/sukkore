@@ -1,5 +1,5 @@
 INCLUDE "hardware.inc/hardware.inc"
-INCLUDE "entsys.inc"
+INCLUDE "entsys/entsys.inc"
 
 SECTION "ENTSYS", ROM0
 
