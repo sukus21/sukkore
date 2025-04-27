@@ -94,6 +94,7 @@ Setup::
 
     ; Setup ALL variables
     farcall VariablesInit
+    call VQueueInit
 
     ; Put RNG seed back maybe
     pop af

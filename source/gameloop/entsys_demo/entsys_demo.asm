@@ -18,8 +18,8 @@ TestloopStr:
 ;
 
 TestloopTransfers:
-    vqueue_prepare_set VQUEUE_TYPE_DIRECT, 32*32/16, VM_ENTALLOC_CHUNKS, 0
-    vqueue_prepare_copy VQUEUE_TYPE_DIRECT, VT_ENTALLOC_FONT, TestloopFont
+    vqueue_prepare_memset VM_ENTALLOC_CHUNKS, 0, 32*32, 0, 0
+    vqueue_prepare_memcpy VT_ENTALLOC_FONT, TestloopFont, 0, 0
 ;
 
 SECTION "GAMELOOP TEST", ROM0

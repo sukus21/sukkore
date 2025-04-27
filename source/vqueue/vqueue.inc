@@ -1,341 +1,208 @@
     IF !DEF(STRUCT_VQUEUE_INC)
     DEF STRUCT_VQUEUE_INC EQU 1
 
-; Determines if set mode is enabled or not.
-; Used on `VQUEUE_TYPE`.
-DEF VQUEUEB_MODEFLAG EQU 7
-DEF VQUEUEF_MODEFLAG EQU %10000000
+INCLUDE "utils.inc"
+INCLUDE "config.inc"
 
-; Enables set-mode.
-; Data is not copied, but set to a single value.
-; The value to set is stored at `VQUEUE_SOURCE_BANK`.
-DEF VQUEUE_MODEFLAG_SETMODE EQU %10000000
+; Allocated space for the stack dedicated to VQueue job routines.
+DEF VQUEUE_STACK_SIZE EQU $20
 
-; Enables copy-mode.
-; In copy-mode, data is copied from source to destination.
-; Source is a 3-byte pointer, the first reserved for ROM bank number.
-DEF VQUEUE_MODEFLAG_COPYMODE EQU 0
+
 
 RSRESET
 
-; The number of slots in the VRAM transfer queue.
-DEF VQUEUE_QUEUE_SIZE EQU 16
-
-; Vqueue element not currently used.
-DEF VQUEUE_TYPE_NONE RB 1
-
-; Data transfer is direct, 1-to-1.
-; Ideal for copying tiles.
-; One transfer operation = 16 bytes.
-DEF VQUEUE_TYPE_DIRECT RB 1
-
-; Works with half a row at a time.
-; Every 16 processed bytes, the destination pointer is moved 16 bytes forward.
-; One transfer operation = 16 bytes.
-DEF VQUEUE_TYPE_HALFROW RB 1
-
-; Sets destination data in "columns".
-; Places one source byte every 32 destination bytes.
-; Makes best sense to use when copying vertical strips to tilemaps.
-; One transfer operation = 1 column (32 bytes).
-; When one column is done, move onto the next column.
-DEF VQUEUE_TYPE_COLUMN RB 1
-
-; Works with 20 bytes at a time.
-; Every 20 processed bytes, the destination pointer is moved 12 bytes forward.
-; One transfer operation = 20 bytes.
-DEF VQUEUE_TYPE_SCREENROW RB 1
-
-RSRESET
-
-; Type of this vqueue element.
-; Check `VQUEUE_TYPE_*` to see available types.
-; If the highest bit is set, "set" mode is enabled.
-DEF VQUEUE_TYPE RB 1
-
-; Number of transfer operations to perform.
-; Does not have to mean bytes.
-DEF VQUEUE_LENGTH RB 1
-
-; Number of transfer operations completed.
-; When this number matches the length, the transfer is considered complete.
-DEF VQUEUE_PROGRESS RB 1
-
-; Pointer to destination data.
-DEF VQUEUE_DESTINATION RB 2
-
-; Source data ROM bank.
+; Source data bank.
+; Written to `rROMB0` if `CONFIG_BANKABLE_ROMX` is 1.
+; Written to `rRAMB` if `CONFIG_BANKABLE_SRAM` is 1.
+; Written to `rSVBK` if `CONFIG_BANKABLE_WRAMX` is 1.
 DEF VQUEUE_SOURCE_BANK RB 1
 
-; Pointer to source data.
-DEF VQUEUE_SOURCE RB 2
+; Destination data bank.
+; Written to `rVBK`, if `CONFIG_BANKABLE_VRAM` is 1.
+DEF VQUEUE_DESTINATION_BANK RB 1
 
-; Increments the value at this address when transfer is complete.
-DEF VQUEUE_WRITEBACK RB 2
+DEF VQUEUE_REGISTER_PC RW 1
+DEF VQUEUE_REGISTER_SP RW 1
+DEF VQUEUE_REGISTER_BC RW 1
+DEF VQUEUE_REGISTER_DE RW 1
+DEF VQUEUE_REGISTER_HL RW 1
+DEF VQUEUE_REGISTER_AF RW 1
 
-; A VRAM transfer queue object.
+; The value at this address is decremented when a transfer finishes.
+DEF VQUEUE_WRITEBACK RW 1
+
+; A VQueue job struct.
 DEF VQUEUE_T RB 0
 
 
 
-; Prepares a label to be copied.
-; This macro expands to 10 bytes of data.
+; Creates a prepared VQueue transfer.
+; This macro expands to 16 bytes of data.
 ;
 ; Input:
-; - `1`: Transfer type (`VQUEUE_TYPE_*`)
-; - `2`: Transfer operation count (n8)
-; - `3`: Destination (address/label)
-; - `4`: Source (label)
-; - `5*`: Writeback pointer (address/label, default: 0)
+; - `1`: PC (label/n16)
+; - `2*`: HL value
+; - `3*`: BC value
+; - `4*`: DE value
+; - `5*`: AF value
+; - `6*`: writeback address (label/n16)
+; - `7*`: destination bank (n8)
+; - `8*`: source bank (n8)
 MACRO vqueue_prepare
-    db \1           ; type
-    db \2           ; transfer operation count
-    db $00          ; progress
-    dw \3           ; destination
-    db bank(\4)     ; source bank
-    dw \4           ; source
-    IF _NARG == 5
-        dw \5       ; writeback pointer
+
+    ; source bank
+    IF _NARG >= 8
+        db \8
     ELSE
-        dw $0000    ; writeback pointer
-    ENDC
-ENDM
-
-
-
-; Prepares a label to be copied.
-; Assumes the source label has an exported `.end` sublabel.
-; Throws errors if data length is not divisible by \4.
-; This macro expands to 10 bytes of data.
-;
-; Input:
-; - `1`: Transfer type (`VQUEUE_TYPE_*`)
-; - `2`: Destination (address/label)
-; - `3`: Source (label)
-; - `4*`: Writeback pointer (address/label, default: 0)
-; - `5*`: Source divisible by (n8, default: 16)
-MACRO vqueue_prepare_copy
-    IF _NARG == 5
-        ASSERT (\3.end - \3) % (\5) == 0
-    ELSE
-        ASSERT (\3.end - \3) % (16) == 0
+        db bank(@)
     ENDC
 
-    db \1 | VQUEUE_MODEFLAG_COPYMODE    ; type
-    IF _NARG == 5
-        db (\3.end - \3) / (\5)         ; transfer operation count
+    ; destination bank
+    IF _NARG >= 7
+        db \7
     ELSE
-        db (\3.end - \3) / (16)         ; transfer operation count
+        db $00
     ENDC
-    db $00                              ; progress
-    dw \2                               ; destination
-    db bank(\3)                         ; source bank
-    dw \3                               ; source
+
+    ; PC
+    dw \1
+
+    ; SP
+    dw wVQueueStack
+    
+    ; BC
+    IF _NARG >= 3
+        dw \3
+    ELSE
+        dw $0000
+    ENDC
+
+    ; DE
     IF _NARG >= 4
-        dw \4                           ; writeback pointer
+        dw \4
     ELSE
-        dw $0000                        ; writeback pointer
+        dw $0000
+    ENDC
+
+    ; HL
+    IF _NARG >= 2
+        dw \2
+    ELSE
+        dw $0000
+    ENDC
+
+    ; AF
+    IF _NARG >= 5
+        dw \5
+    ELSE
+        dw $0000
+    ENDC
+
+    ; Writeback
+    IF _NARG >= 6
+        dw \6
+    ELSE
+        dw $0000
     ENDC
 ENDM
 
 
 
-; Prepares a vqueue transfer, that can be enqueued fast.
-; Automatically appends the `SETMODE` flag.
-; This macro expands to 10 bytes of data.
+; Prepares a label to be copied to VRAM.
+; This macro expands to 16 bytes of data.
 ;
 ; Input:
-; - `1`: Transfer type (`VQUEUE_TYPE_*`)
-; - `2`: Transfer operation count (n8)
-; - `3`: Destination (address/label)
-; - `4`: Byte value (n8)
-; - `5*`: Writeback pointer (address/label, default: 0)
-MACRO vqueue_prepare_set
-    db \1 | VQUEUE_MODEFLAG_SETMODE ; type
-    db \2                           ; transfer operation count
-    db $00                          ; progress
-    dw \3                           ; destination
-    db \4                           ; fill byte
-    dw $0000                        ; source data (unused for SET mode)
-    IF _NARG == 5
-        dw \5                       ; writeback pointer
+; - `1`: destination (label/n16)
+; - `2`: source (label)
+; - `3`: destination bank (n8)
+; - `4`: writeback pointer (label/n16)
+MACRO vqueue_prepare_memcpy
+    IF \2.end - \2 <= 256
+        vqueue_prepare MemcpyShort, \1, \2, (\2.end - \2) << 8, $0000, \4, \3, bank(\2)
     ELSE
-        dw $0000                    ; writeback pointer
+        vqueue_prepare Memcpy, \1, \2, \2.end - \2, $0000, \4, \3, bank(\2)
     ENDC
 ENDM
 
 
 
-; This macro enqueues a prepared vqueue transfer automatically.  
-; Use `vqueue_prepare` to prepare a transfer.  
-; Switches banks.
+; Prepares data to be filled in VRAM.
+; This macro expands to 16 bytes of data.
 ;
 ; Input:
-; - `1`: Prepared transfer (label)
-;
-; Destroys: `af`, `de`, `hl`
-MACRO vqueue_enqueue_auto
-    ld a, bank(\1)
-    ld [rROMB0], a
-    ld de, \1
-    call VQueueEnqueue
+; - `1`: destination (label/n16)
+; - `2`: byte value (n8)
+; - `3`: byte count (n16)
+; - `4`: destination bank (n8)
+; - `5`: writeback pointer (label/n16)
+MACRO vqueue_prepare_memset
+    IF \3 <= 256
+        vqueue_prepare MemsetShort \1, (\2 << 8) | \3, $0000, $0000, \5, \4
+    ELSE
+        vqueue_prepare Memset, \1, \2, \3, $0000, \5, \4
+    ENDC
 ENDM
 
 
 
-; Macro that adds an element to the VRAM transfer queue.
-; Does not set writeback pointer.
-;
-; Input:
-; - `1`: Transfer type (`VQUEUE_TYPE_*`)
-; - `2`: Transfer operation count (n8)
-; - `3`: Destination (address/label)
-; - `4`: Source (label)
-;
-; Returns:
-; - `hl`: `VQUEUE` pointer, at `VQUEUE_WRITEBACK`
-;
-; Destroys: `af`  
-; Saves: `bc`, `de`
-MACRO vqueue_add
-    call VQueueGet
-
-    ; Write type and length
-    ld a, \1
-    ld [hl+], a ; type
-    ld a, \2
-    ld [hl+], a ; length
-    xor a
-    ld [hl+], a ; progress
-
-    ; Write destination
-    ld a, low(\3)
-    ld [hl+], a ; destination (low)
-    ld a, high(\3)
-    ld [hl+], a ; destination (high)
-    
-    ; Write source
-    ld a, bank(\4)
-    ld [hl+], a
-    ld a, low(\4)
-    ld [hl+], a
-    ld a, high(\4)
-    ld [hl+], a
-ENDM
-
-
-
-; Macro that adds a copy-mode transfer to the VRAM transfer queue.
+; Macro that adds a memcpy transfer to the VRAM transfer queue.
 ; Assumes the source label has an exported `.end` sublabel.
-; Throws errors if data length is not divisible by \4.
 ; Does not set writeback pointer.
 ;
 ; Input:
-; - `1`: Transfer type (`VQUEUE_TYPE_*`)
-; - `2`: Destination (address/label/r16)
-; - `3`: Source (label)
-; - `4*`: Source divisible by (default: 16)
+; - `1`: Destination (label/n16/r16)
+; - `2`: Source (label)
+; - `3*`: Destination bank (n8)
 ;
 ; Returns:
 ; - `hl`: `VQUEUE` pointer, at `VQUEUE_WRITEBACK`
 ;
 ; Destroys: `af`  
 ; Saves: `bc`, `de`
-MACRO vqueue_add_copy
-    IF _NARG == 4
-        ASSERT (\3.end - \3) % (\4) == 0
-    ELSE
-        ASSERT (\3.end - \3) % (16) == 0
-    ENDC
+MACRO vqueue_add_memcpy
     call VQueueGet
+    
+    ; Write source bank
+    ld a, bank(\2)
+    ld [hl+], a
 
-    ; Write type and length
-    ld a, \1 | VQUEUE_MODEFLAG_COPYMODE
-    ld [hl+], a ; type
-    IF _NARG == 4
-        ld a, (\3.end - \3) / (\4)
+    ; Write destination bank
+    is_r16 \1
+    IF !ISCONST(#\1) && !IS_R16
+        ld a, bank(\1)
+    ELIF _NARG >= 3
+        ld a, \3
     ELSE
-        ld a, (\3.end - \3) / (16)
+        IF CONFIG_BANKABLE_VRAM
+            WARN "no VRAM bank specified, defaulting to 0"
+        ENDC
+        xor a
     ENDC
-    ld [hl+], a ; length
+    ld [hl+], a
+
+    ; Write registers
+    ; Maybe this can be a short memcpy?
+    IF \2.end - \2 <= 256
+        write_n16 MemcpyShort   ; Program counter
+        write_n16 wVQueueStack  ; Stack pointer
+        write_n16 \2            ; BC, source address
+        inc l
+        ld a, \2.end - \2
+        ld [hl+], a             ; D, byte length
+        write_n16 \1            ; HL, destination
+    ELSE
+        ; Write registers
+        write_n16 Memcpy        ; Program counter
+        write_n16 wVQueueStack  ; Stack pointer
+        write_n16 \2            ; BC, source address
+        write_n16 \2.end - \2   ; DE, byte length
+        write_n16 \1            ; HL, destination
+    ENDC
+
+    ; Write AF
     xor a
-    ld [hl+], a ; progress
-
-    ; Write destination
-    ld a, low(\2)
-    ld [hl+], a ; destination (low)
-    ld a, high(\2)
-    ld [hl+], a ; destination (high)
-    
-    ; Write source
-    ld a, bank(\3)
     ld [hl+], a
-    ld a, low(\3)
     ld [hl+], a
-    ld a, high(\3)
-    ld [hl+], a
-ENDM
-
-
-
-; Macro that adds a set-mode transfer to the VRAM transfer queue.
-; Does not set writeback pointer.
-;
-; Input:
-; - `1`: Transfer type (`VQUEUE_TYPE_*`)
-; - `2`: Transfer operation count (n8)
-; - `3`: Destination (address/label)
-; - `4`: Set value (n8)
-;
-; Returns:
-; - `hl`: `VQUEUE` pointer, at `VQUEUE_WRITEBACK`
-;
-; Destroys: `af`  
-; Saves: `bc`, `de`
-MACRO vqueue_add_set
-    call VQueueGet
-
-    ; Write type and length
-    ld a, \1 | VQUEUE_MODEFLAG_SETMODE
-    ld [hl+], a ; type
-    ld a, \2
-    ld [hl+], a ; length
-    xor a
-    ld [hl+], a ; progress
-
-    ; Write destination
-    ld a, low(\3)
-    ld [hl+], a ; destination (low)
-    ld a, high(\3)
-    ld [hl+], a ; destination (high)
-    
-    ; Write fill byte
-    ld a, \4
-    ld [hl+], a
-    inc l
-    inc l
-ENDM
-
-
-
-; Macro that adds a direct-type copy-mode transfer to the VRAM transfer queue.
-; Assumes the source label has an exported `.end` sublabel.
-;
-; Input:
-; - `1`: Transfer type (`VQUEUE_TYPE_*`)
-; - `2`: Destination (address/label/r16)
-; - `3`: Source (label)
-; - `4*`: Writeback pointer (address/label/r16, default: 0)
-;
-; Destroys: `af`  
-; Saves: `bc`, `de`, `hl`
-MACRO vqueue_addw
-    push hl
-    vqueue_add_copy \1, \2, \3
-    ld a, low(\4)
-    ld [hl+], a
-    ld [hl], high(\4)
-    pop hl
 ENDM
 
     ENDC

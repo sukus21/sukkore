@@ -76,24 +76,12 @@ VarW0:
             color_dmg_blk
             ASSERT high(wPaletteCGB) == high(wPaletteCGB+7)
         ;
-        
+
         ; Fade value for scene transitions.
         wFadeState:: db $00
         wPaletteBGP:: dw $0000
         wPaletteOBP0:: dw $0000
         wPaletteOBP1:: dw $0000
-
-        ; If you just need some address, this will do.
-        wVQueueWriteback:: db $00
-
-        ; Points to the first available vqueue slot.
-        wVQueueFirst:: dw wVQueue
-
-        ; Array of `VQUEUE_T`.
-        ; Only first entry is all on the same page.
-        wVQueue:: ds VQUEUE_T * VQUEUE_QUEUE_SIZE, VQUEUE_TYPE_NONE
-        .end::
-        ASSERT high(wVQueue) == high(wVQueue + VQUEUE_T)
 
         ; Rectangle sprite tile ID
         wSpriteRectangle:: db $00
@@ -194,22 +182,20 @@ VarH:
 
 
 SECTION "WRAMX UNINITIALIZED", WRAMX, ALIGN[8]
+
     ; Entity system.
     wEntsys::
-        DEF ENTITY_CURRENT = 0
-        REPT ENTSYS_CHUNK_COUNT
-            .bank{d:ENTITY_CURRENT}: ds 1
-            .next{d:ENTITY_CURRENT}: ds 1
-            .step{d:ENTITY_CURRENT}: ds 2
-            .flags{d:ENTITY_CURRENT}: ds 1
-            .ypos{d:ENTITY_CURRENT}: ds 2
-            .xpos{d:ENTITY_CURRENT}: ds 2
-            .height{d:ENTITY_CURRENT}: ds 1
-            .width{d:ENTITY_CURRENT}: ds 1
-            .vars{d:ENTITY_CURRENT}: ds 5
-            DEF ENTITY_CURRENT += 1
-        ENDR
-        PURGE ENTITY_CURRENT
+    FOR ENTITY_CURRENT, ENTSYS_CHUNK_COUNT
+        .bank{d:ENTITY_CURRENT}: ds 1
+        .next{d:ENTITY_CURRENT}: ds 1
+        .step{d:ENTITY_CURRENT}: ds 2
+        .flags{d:ENTITY_CURRENT}: ds 1
+        .ypos{d:ENTITY_CURRENT}: ds 2
+        .xpos{d:ENTITY_CURRENT}: ds 2
+        .height{d:ENTITY_CURRENT}: ds 1
+        .width{d:ENTITY_CURRENT}: ds 1
+        .vars{d:ENTITY_CURRENT}: ds 5
+    ENDR
     .end::
 
     ; Entity system allocation status.

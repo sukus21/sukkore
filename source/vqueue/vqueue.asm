@@ -1,72 +1,70 @@
 INCLUDE "hardware.inc/hardware.inc"
 INCLUDE "vqueue/vqueue.inc"
+INCLUDE "config.inc"
+INCLUDE "macro/lyc.inc"
 INCLUDE "macro/memcpy.inc"
 
-; If this scanline has been reached, do not perform any more transfer operations.
-DEF VQUEUE_ITERATION_TIME EQU $97
+SECTION "VQUEUE", ROM0
 
-SECTION "VRAM QUEUE", ROM0
-
-; Get a vqueue slot pointer.
-; When adding multiple transfers, completion order is not guaranteed.  
+; Initializes the VRAM queue.  
 ; Lives in ROM0.
 ;
-; Returns:
-; - `hl`: `VQUEUE` pointer
-;
-; Saves: `bc`, `de`
-VQueueGet::
-    ld hl, wVQueueFirst
-    ld a, [hl+]
-    ld h, [hl]
-    ld l, a
-    push de
-    push hl
+; Destroys: all
+VQueueInit::
+    IF CONFIG_BANKABLE_ROMX
+        ld a, bank(VQueueRamcode)
+        ld [rROMB0], a
+    ENDC
 
-    ; Increment this pointer a wee bit
-    ld a, l
-    add a, VQUEUE_T
-    ld e, a
-    ld a, h
-    adc a, 0
-    ld d, a
+    ; Copy RAM code routines
+    memcpy_label VQueueRamcode, wVQueueRamcode
 
-    ; Out of bounds check
-    cp a, high(wVQueue.end)
-    jr nz, :+
-        ld a, e
-        cp a, low(wVQueue.end)
-        jr nz, :+
+    ; Initialize variables
+    xor a
+    ld hl, wVQueueFree
+    ld [hl+], a ; hl = wVQueueFree
+    ld [hl+], a ; hl = wVQueueCurrent
 
-        ; Uh oh, overflow alert
-        ld hl, ErrorVQueueOverflow
-        rst vError
-    :
-
-    ; Store this back as the new first slot
-    ld hl, wVQueueFirst
-    ld a, e
+    ; Set job return address
+    ld hl, wVQueueReturn
+    ld a, low(VQueueRun.returnAddress)
     ld [hl+], a
-    ld [hl], d
+    ld [hl], high(VQueueRun.returnAddress)
 
-    ; Yes, good, return
-    pop hl
-    pop de
+    ; We are done here
     ret
 ;
 
 
 
-; Enqueue a prepared vqueue transfer (See `vqueue_prepare`).  
-; Assumes the correct ROM-bank is switched in.  
+; Get a VQueue slot pointer.  
 ; Lives in ROM0.
 ;
-; Input:
-; - `de`: Prepared transfer
-VQueueEnqueue::
-    call VQueueGet
-    ld b, VQUEUE_T
-    memcpy_custom hl, de, b
+; Returns:
+; - `hl`: `VQUEUE_T` pointer
+;
+; Saves: `bc`, `de`
+VQueueGet::
+    push bc
+
+    ; Read into B and increment
+    ld hl, wVQueueFree
+    ld a, [hl]
+    ld b, a
+    add a, VQUEUE_T
+    ld [hl+], a
+
+    ; Are we out of slots?
+    cp a, [hl] ; hl = wVQueueCurrent
+    jr nz, :+
+        ld hl, ErrorVQueueOverflow
+        rst vError
+    :
+
+    ; Yes, good, return
+    ld l, b
+    ld h, high(wVQueue)
+    pop bc
     ret
 ;
 
@@ -99,41 +97,6 @@ VQueueEnqueueMulti::
 
 
 
-; Clears all vqueue transfers, even ones currently in progress.  
-; Lives in ROM0.
-;
-; Saves: `c`, `de`
-VQueueClear::
-    ld hl, wVQueue
-    ld a, l
-    ld [wVQueueFirst], a
-    ld a, h
-    ld [wVQueueFirst+1], a
-    ld b, VQUEUE_QUEUE_SIZE
-
-    .loop
-
-    ; Is this a valid entry?
-    ld a, [hl]
-    cp a, VQUEUE_TYPE_NONE
-    ret z
-
-    ; Clear this entry
-    xor a
-    REPT VQUEUE_T
-        ld [hl+], a
-    ENDR
-
-    ; Next entry?
-    dec b
-    jr nz, .loop
-
-    ; Nope, this is the end
-    ret
-;
-
-
-
 ; Checks if vqueue is empty.  
 ; Lives in ROM0.
 ;
@@ -142,491 +105,221 @@ VQueueClear::
 ;
 ; Destroys: `af`
 VQueueEmpty::
-    ld a, [wVQueue]
-    cp a, VQUEUE_TYPE_NONE
+    push hl
+    ld hl, wVQueueFree
+    ld a, [hl+]
+    cp a, [hl]
+    pop hl
     ret
 ;
 
 
 
-; Execute transfers from the VRAM queue.  
-; Assumes VRAM access.  
-; Switches banks.  
-; Lives in ROM0.  
+; Executes jobs from the VRAM queue until the end of VBlank.  
+; Lives in ROM0.
 ;
 ; Destroys: all
 VQueueExecute::
-    ; Get type of transfer
-    ld hl, wVQueue
-    ld a, [hl+]
-    cp a, VQUEUE_TYPE_NONE
-    ret z
+    ld [wVQueueSP], sp
 
-    ; Set-mode?
-    bit VQUEUEB_MODEFLAG, a
-    jr z, .copymode
-        res VQUEUEB_MODEFLAG, a
-        cp a, VQUEUE_TYPE_DIRECT
-        jr nz, :+
-            call VQueueSetDirect
-            ret z
-            jr .finish
-        :
+    ; Set up LYC interrupt
+    LYC_set_jumppoint VQueueInterrupt
+    ld a, STATF_LYC
+    ldh [rSTAT], a
+    ld a, IEF_STAT
+    ldh [rIE], a
+    xor a
+    ldh [rLYC], a
+    ldh [rIF], a
 
-        cp a, VQUEUE_TYPE_HALFROW
-        jr nz, :+
-            call VQueueSetHalfrow
-            ret z
-            jr .finish
-        :
-
-        cp a, VQUEUE_TYPE_COLUMN
-        jr nz, :+
-            call VQueueSetColumn
-            ret z
-            jr .finish
-        :
-
-        cp a, VQUEUE_TYPE_SCREENROW
-        jr nz, :+
-            call VQueueSetScreenrow
-            ret z
-            jr .finish
-        :
-
-        ; Transfer type not found
-        jr .finish
-    ;
-
-    ; Copy-mode
-    .copymode
-        cp a, VQUEUE_TYPE_DIRECT
-        jr nz, :+
-            call VQueueCopyDirect
-            ret z
-            jr .finish
-        :
-
-        cp a, VQUEUE_TYPE_HALFROW
-        jr nz, :+
-            call VQueueCopyHalfrow
-            ret z
-            jr .finish
-        :
-
-        cp a, VQUEUE_TYPE_COLUMN
-        jr nz, :+
-            call VQueueCopyColumn
-            ret z
-            jr .finish
-        :
-
-        cp a, VQUEUE_TYPE_SCREENROW
-        jr nz, :+
-            call VQueueCopyScreenrow
-            ret z
-            jr .finish
-        :
-
-        ; Type not found
-        jr .finish
-    ;
-
-    ; Finish a transfer
-    .finish
-        ; Set type to none
-        ld hl, wVQueue + VQUEUE_TYPE
-        ld [hl], VQUEUE_TYPE_NONE
-
-        ; Perform writeback
-        ld l, low(wVQueue) + VQUEUE_WRITEBACK
-        ld a, [hl+]
-        ld c, [hl]
-        ld [hl], 0
-        ld h, c
-        ld l, a
-        bit 7, h
-        jr z, :+
-            inc [hl]
-        :
-
-        ; Move to last queued transfer
-        ld hl, wVQueueFirst
-        ld a, [hl+]
-        sub a, VQUEUE_T
-        jr nc, :+
-            dec [hl]
-        :
-        ld c, a
-        ld a, [hl-]
-        ld [hl], c
-        ld h, a
-        ld l, c
-
-        ; Transfer exists?
-        ld a, [hl]
-        cp a, VQUEUE_TYPE_NONE
+    ld h, high(wVQueue)
+    ld a, [wVQueueCurrent]
+    ld l, a
+    .loop
+        ; Are there any jobs left?
+        ld a, [wVQueueFree]
+        cp a, l
         ret z
 
-        ; Copy transfer to first slot
-        ld bc, wVQueue
-        ld [bc], a
-        inc c
-        ld a, VQUEUE_TYPE_NONE
-        ld [hl+], a
-        REPT VQUEUE_T-1
-            ld a, [hl+]
-            ld [bc], a
-            inc c
-        ENDR
-
-        ; Do we have time to start this transfer?
+        ; Do we have TIME for a job?
         ldh a, [rLY]
-        cp a, VQUEUE_ITERATION_TIME
-        jp c, VQueueExecute
+        cp a, $98
+        ret z
+
+        ; Yes there are, execute it!
+        call VQueueRun
+        jr .loop
+    ;
+;
+
+
+
+SECTION "VQUEUE RAMCODE DATA", ROMX
+
+VQueueRamcode:
+LOAD "VQUEUE RAMCODE", WRAM0
+    wVQueueRamcode:
+
+    ; Input:
+    ; - `hl`: VQueue job pointer
+    VQueueRun::
+
+        ; Switch source bank
+        ld a, [hl+]
+        IF CONFIG_BANKABLE_ROMX
+            ld [rROMB0], a
+        ENDC
+        IF CONFIG_BANKABLE_SRAM
+            ld [rRAMB], a
+        ENDC
+        IF CONFIG_BANKABLE_WRAMX
+            ldh [rSVBK], a
+        ENDC
+
+        ; Switch destination bank
+        ld a, [hl+]
+        IF CONFIG_BANKABLE_VRAM
+            ldh [rVBK], a
+        ENDC
+
+        ; Prepare program counter
+        ld a, [hl+]
+        ld [.setPC + 1], a
+        ld a, [hl+]
+        ld [.setPC + 2], a
+
+        ; Prepare stack pointer
+        ld a, [hl+]
+        ld [.setSP + 1], a
+        ld a, [hl+]
+        ld [.setSP + 2], a
+
+        ; Prepare all other registers
+        ld [.restoreSP + 1], sp
+        ld sp, hl
+        pop bc
+        pop de
+        pop hl
+        pop af
+        ld [.restoreHL + 1], sp
+
+        ; Prepare for the jump
+        .setSP ld sp, $0000
+        ei
+        .setPC jp $0000
+
+        ; If you're here, that means the job has completed!
+        .returnAddress::
+        di
+        .restoreHL ld hl, $0000
+        .restoreSP ld sp, $0000
+
+        ; Read writeback pointer
+        ld a, [hl+]
+        ld b, [hl]
+        inc l ; explicitly ignore carry to loop queue around
+
+        ; Do we perform writeback?
+        or a, a
+        jr z, :+
+
+            ; Perform writeback
+            ld c, a
+            ld a, [bc]
+            dec a
+            ld [bc], a
+        :
+
+        ; Increment `wVQueueCurrent`
+        ld bc, wVQueueCurrent
+        ld a, [bc]
+        add a, VQUEUE_T
+        ld [bc], a
+
+        ; Return
+        ret
     ;
 
-    ; Return
-    ret 
-;
 
 
+    ; Input:
+    ; - `all`: any
+    VQueueInterrupt::
+        ; Store registers temporarily, without altering the flags
+        ld [.setA + 1], a
+        ld [.setSP + 1], sp
 
-MACRO vqueue_copy_start
-    ; Get length remaining
-    ld a, [hl+]
-    ld d, a ; length total -> D
-    ld a, [hl+]
-    ld e, a ; progress -> E
+        ; Read job pointer -> sp
+        ld a, [VQueueRun.restoreHL + 1]
+        ld [.restoreSP + 1], a
+        ld a, [VQueueRun.restoreHL + 2]
+        ld [.restoreSP + 2], a
+        .restoreSP ld sp, $0000
 
-    ; Get destination -> BC
-    ld a, [hl+]
-    ld c, a
-    ld a, [hl+]
-    ld b, a
+        ; Save general purpose register pairs
+        .setA ld a, $00
+        push af
+        push hl
+        push de
+        push bc
 
-    ; Get source -> HL
-    ld a, [hl+]
-    ld [rROMB0], a
-    ld a, [hl+]
-    ld h, [hl]
-    ld l, a
-
-    .loop
-ENDM
-
-MACRO vqueue_copy_end
-    ; Is it over?
-    inc e
-    ld a, e
-    sub a, d
-    jr nz, :+
-        inc a ; reset Z-flag
-        ret
-    :
-
-    ; Time for another iteration?
-    ldh a, [rLY]
-    cp a, VQUEUE_ITERATION_TIME
-    IF @ - .loop > 127
-        jp c, .loop
-    ELSE
-        jr c, .loop
-    ENDC
-
-    ; Time is up
-    ; Save transfer completion count
-    ld a, e
-    ld d, h
-    ld e, l
-    ld hl, wVQueue + VQUEUE_PROGRESS
-    ld [hl+], a
-
-    ; Save destination
-    ld a, c
-    ld [hl+], a
-    ld a, b
-    ld [hl+], a
-
-    ; Save source
-    inc hl
-    ld a, e
-    ld [hl+], a
-    ld [hl], d
-
-    ; Return
-    xor a ; sets Z-flag
-    ret
-ENDM
-
-MACRO vqueue_set_start
-    ; Get length remaining
-    ld a, [hl+]
-    ld d, a ; length total -> D
-    ld a, [hl+]
-    ld e, a ; progress -> E
-
-    ; Get destination -> BC
-    ld a, [hl+]
-    ld c, a
-    ld a, [hl+]
-    ld b, a
-
-    ; Get source -> A, move destination to HL
-    ld a, [hl]
-    ld h, b
-    ld l, c
-    ld b, a
-
-    .loop
-    ld a, b
-ENDM
-
-MACRO vqueue_set_end
-    ; Is it over?
-    inc e
-    ld a, e
-    sub a, d ; set A to 0 if Z flag
-    jr nz, :+
-        inc a ; reset Z-flag
-        ret
-    :
-
-    ; Time for another iteration?
-    ldh a, [rLY]
-    cp a, VQUEUE_ITERATION_TIME
-    IF @ - .loop > 127
-        jp c, .loop
-    ELSE
-        jr c, .loop
-    ENDC
-
-    ; Time is up
-    ; Save transfer completion count
-    ld b, h
-    ld c, l
-    ld hl, wVQueue + VQUEUE_PROGRESS
-    ld a, e
-    ld [hl+], a
-
-    ; Save destination
-    ld a, c
-    ld [hl+], a
-    ld a, b
-    ld [hl+], a
-
-    ; Return
-    xor a ; sets Z-flag
-    ret
-ENDM
-
-
-
-; Subroutine for `VQueueExecute`.  
-; Same notes as `VQueueExecute`.
-;
-; Input:
-; - `hl`: `VQUEUE` pointer, at `VQUEUE_LENGTH`
-;
-; Returns:
-; - `fZ`: Transfer ended early
-VQueueCopyDirect:
-    vqueue_copy_start
-    REPT 16
+        ; Save job SP and PC
+        .setSP ld hl, $0000
         ld a, [hl+]
-        ld [bc], a
-        inc bc
-    ENDR
-    vqueue_copy_end
-;
-
-
-
-; Subroutine for `VQueueExecute`.  
-; Same notes as `VQueueExecute`.
-;
-; Input:
-; - `hl`: `VQUEUE` pointer, at `VQUEUE_LENGTH`
-;
-; Returns:
-; - `fZ`: Transfer ended early
-VQueueSetDirect:
-    vqueue_set_start
-    REPT 16
-        ld [hl+], a
-    ENDR
-    vqueue_set_end
-;
-
-
-
-; Subroutine for `VQueueExecute`.  
-; Same notes as `VQueueExecute`.
-;
-; Input:
-; - `hl`: `VQUEUE` pointer, at `VQUEUE_LENGTH`
-;
-; Returns:
-; - `fZ`: Transfer ended early
-VQueueCopyHalfrow:
-    vqueue_copy_start
-    REPT 16
-        ld a, [hl+]
-        ld [bc], a
-        inc bc
-    ENDR
-
-    ; Move destination pointer
-    ld a, c
-    add a, 16
-    ld c, a
-    jr nc, :+
-        inc b
-    :
-    
-    vqueue_copy_end
-;
-
-
-
-; Subroutine for `VQueueExecute`.  
-; Same notes as `VQueueExecute`.
-;
-; Input:
-; - `hl`: `VQUEUE` pointer, at `VQUEUE_LENGTH`
-;
-; Returns:
-; - `fZ`: Transfer ended early
-VQueueSetHalfrow:
-    vqueue_set_start
-    REPT 16
-        ld [hl+], a
-    ENDR
-
-    ; Move destination pointer
-    ld a, l
-    add a, 16
-    ld l, a
-    jr nc, :+
-        inc h
-    :
-    
-    vqueue_set_end
-;
-
-
-
-; Subroutine for `VQueueExecute`.  
-; Same notes as `VQueueExecute`.
-;
-; Input:
-; - `hl`: `VQUEUE` pointer, at `VQUEUE_LENGTH`
-;
-; Returns:
-; - `fZ`: Transfer ended early
-VQueueCopyColumn:
-    vqueue_copy_start
-    push bc
-    REPT 32
-        ld a, [hl+]
-        ld [bc], a
-        ld a, c
-        add a, 32
         ld c, a
-        jr nc, :+
-            inc b
-        :
-    ENDR
-
-    ; Move destination pointer
-    pop bc
-    inc bc
-    
-    vqueue_copy_end
-;
-
-
-
-; Subroutine for `VQueueExecute`.  
-; Same notes as `VQueueExecute`.
-;
-; Input:
-; - `hl`: `VQUEUE` pointer, at `VQUEUE_LENGTH`
-;
-; Returns:
-; - `fZ`: Transfer ended early
-VQueueSetColumn:
-    vqueue_set_start
-    push bc
-    REPT 32
-        ld [hl+], a
-        ld a, l
-        add a, 32
-        ld l, a
-        jr nc, :+
-            inc h
-        :
-    ENDR
-
-    ; Move destination pointer
-    pop hl
-    inc hl
-    
-    vqueue_set_end
-;
-
-
-
-; Subroutine for `VQueueExecute`.  
-; Same notes as `VQueueExecute`.
-;
-; Input:
-; - `hl`: `VQUEUE` pointer, at `VQUEUE_LENGTH`
-;
-; Returns:
-; - `fZ`: Transfer ended early
-VQueueCopyScreenrow:
-    vqueue_copy_start
-    REPT 20
         ld a, [hl+]
-        ld [bc], a
-        inc bc
+        ld b, a
+        push hl
+        push bc
+
+        ; Restore REAL program counter
+        ld hl, wVQueueSP
+        ld a, [hl+]
+        ld h, [hl]
+        ld l, a
+        ld sp, hl
+        ret
+    ;
+ENDL
+.end
+
+
+
+SECTION "VQUEUE DATA", WRAM0, ALIGN[8]
+
+    ; The VRAM job queue.
+    wVQueue:: ds 0
+    FOR VQUEUE_ENTRY, 16
+        .sourceBank{d:VQUEUE_ENTRY}: ds 1
+        .destinationBank{d:VQUEUE_ENTRY}: ds 1
+        .registerPC{d:VQUEUE_ENTRY}: ds 2
+        .registerSP{d:VQUEUE_ENTRY}: ds 2
+        .registerBC{d:VQUEUE_ENTRY}: ds 2
+        .registerDE{d:VQUEUE_ENTRY}: ds 2
+        .registerHL{d:VQUEUE_ENTRY}: ds 2
+        .registerAF{d:VQUEUE_ENTRY}: ds 2
+        .writeback{d:VQUEUE_ENTRY}: ds 2
     ENDR
+    .end::
 
-    ; Move destination pointer
-    ld a, c
-    add a, 12
-    ld c, a
-    jr nc, :+
-        inc b
-    :
-    
-    vqueue_copy_end
-;
+    ; Top of the VQueue stack.
+    ; See `wVQueueStack`.
+    wVQueueStackBegin: ds VQUEUE_STACK_SIZE
 
+    ; Dedicated stack for use with VQueue jobs.
+    wVQueueStack::
 
+    ; The bottom of the VQueue stack.
+    ; Holds the address all jobs will return to when complete.
+    wVQueueReturn: dw
 
-; Subroutine for `VQueueExecute`.  
-; Same notes as `VQueueExecute`.
-;
-; Input:
-; - `hl`: `VQUEUE` pointer, at `VQUEUE_LENGTH`
-;
-; Returns:
-; - `fZ`: Transfer ended early
-VQueueSetScreenrow:
-    vqueue_set_start
-    REPT 20
-        ld [hl+], a
-    ENDR
+    ; Stack pointer backup.
+    wVQueueSP: dw
 
-    ; Move destination pointer
-    ld a, l
-    add a, 12
-    ld l, a
-    jr nc, :+
-        inc h
-    :
-    
-    vqueue_set_end
-;
+    ; Low pointer to the first free VQueue entry.
+    wVQueueFree:: db
+
+    ; Low pointer to the VQueue entry currently being executed.
+    wVQueueCurrent:: db
+
+ENDSECTION

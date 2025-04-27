@@ -6,11 +6,10 @@ DEF RECTANGLE_TILES EQU $E0
 DEF RECTANGLE_TILE_TOP EQU RECTANGLE_TILES
 DEF RECTANGLE_TILE_BOTTOM EQU RECTANGLE_TILES+2
 
-SECTION "RECTANGLE DRAWER", ROM0
+SECTION "RECTANGLE DRAWER", ROMX
 
 ; Tileset used by rectangle drawing.  
-; Should be placed at tile ID `RECTANGLE_TILES`.  
-; Lives in ROM0.
+; Should be placed at tile ID `RECTANGLE_TILES`.
 RectangleTileset:
     db $FF, $FF, $00, $00, $00, $00, $00, $00
     db $00, $00, $00, $00, $00, $00, $00, $00
@@ -24,8 +23,7 @@ RectangleTileset:
 
 
 
-; Tileset used by rectangle estimate drawer.  
-; Lives in ROM0.
+; Tileset used by rectangle estimate drawer.
 RectanglePointsTileset:
     db $80, $C0, $C0, $40, $00, $00, $00, $00
     db $00, $00, $00, $00, $00, $00, $00, $00
@@ -36,8 +34,7 @@ RectanglePointsTileset:
 
 
 ; Loads tile (singular) required for rectangle point shenanigans.  
-; Queues VQUEUE transfer.  
-; Lives in ROM0.
+; Queues VQueue transfer.
 ;
 ; Input:
 ; - `b`: Destination tile ID
@@ -56,17 +53,16 @@ RectanglePointsLoad::
     add a, high(_VRAM)
     ld d, a
 
-    ; Add VQUEUE transfer
-    vqueue_add_copy VQUEUE_TYPE_DIRECT, de, RectanglePointsTileset
+    ; Add VQueue transfer
+    vqueue_add_memcpy de, RectanglePointsTileset, 0
     ret
 ;
 
 
 
-; Loads rectangle tiles into VRAM.
-; Assumes VRAM access.
+; Loads rectangle tiles into VRAM.  
+; Assumes VRAM access.  
 ; Overwrites VRAM tiles.
-; Lives in ROM0.
 RectangleLoad::
     ld hl, _VRAM + RECTANGLE_TILES * 16
     ld bc, RectangleTileset
@@ -77,7 +73,6 @@ RectangleLoad::
 
 
 ; Test function for rectangle behaviour.
-; Lives in ROM0.
 ;
 ; Input:
 ; - `e`: player input
@@ -156,8 +151,7 @@ RectangleMovement::
 
 
 ; Function to draw a rectangle using sprites.  
-; TODO: proper 8/16 support  
-; Lives in ROM0.
+; TODO: proper 8/16 support
 ;
 ; Input:
 ; - `b`: leftmost X-position of rectangle
@@ -380,8 +374,7 @@ RectangleDraw::
 
 
 ; Draw the corners of a rectangle using sprites.  
-; Assumes the required sprite tile(s) are loaded.  
-; Lives in ROM0.
+; Assumes the required sprite tile(s) are loaded.
 ;
 ; Input:
 ; - `b`: Leftmost X-position of rectangle
