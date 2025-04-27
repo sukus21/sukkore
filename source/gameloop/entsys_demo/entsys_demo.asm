@@ -280,6 +280,25 @@ GameloopTest::
     inc l
     ld [hl], e
 
+    ; Create sprites for load time
+    ld a, [wLoadingFrames]
+    num_to_hex a, d, e
+    ld b, 8
+    ld h, high(wOAM)
+    call SpriteGet
+    ld [hl], 20
+    inc l
+    ld [hl], 8
+    inc l
+    ld [hl], d
+    inc l
+    inc l
+    ld [hl], 20
+    inc l
+    ld [hl], 16
+    inc l
+    ld [hl], e
+
     ; Wait for Vblank
     ld h, high(wOAM)
     call SpriteFinish
