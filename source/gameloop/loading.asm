@@ -10,12 +10,19 @@ SECTION "GAMELOOP LOADING", ROM0
 ; Lives in ROM0.
 GameloopLoading::
     di
-
-    ; Enable only V-blank
-    ld a, IEF_VBLANK
-    ldh [rIE], a
+    xor a
+    ld [wLoadingFrames], a
     
     .loop
+        ; Tick number of frames waiting up
+        ld hl, wLoadingFrames
+        inc [hl]
+
+        ; Enable only V-blank
+        ld a, IEF_VBLANK
+        ldh [rIE], a
+
+        ; Clear current interrupts (if present)
         xor a
         ldh [rIF], a
         halt
@@ -246,3 +253,9 @@ TransitionFadeIn::
         ret
     ;
 ;
+
+
+
+SECTION "LOADING VARIABLES", WRAM0
+
+wLoadingFrames:: ds 1
