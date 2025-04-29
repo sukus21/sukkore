@@ -1,5 +1,4 @@
 INCLUDE "hardware.inc/hardware.inc"
-INCLUDE "macro/color.inc"
 INCLUDE "macro/farcall.inc"
 
 SECTION "SETUP", ROM0
@@ -41,7 +40,7 @@ Setup::
 
     ; Set setup variable to true
     ld a, 1
-    ldh [hSetup], a
+    ld [wSetup], a
 
     ; Do my intro with the logo
     xor a
@@ -70,7 +69,7 @@ Setup::
     ld sp, wStack
 
     ; Check if RNG seed should be saved
-    ldh a, [hSetup]
+    ld a, [wSetup]
     cp a, 0
     push af
     jr z, .skipRNG
@@ -93,8 +92,8 @@ Setup::
     .skipRNG
 
     ; Setup ALL variables
-    farcall VariablesInit
     call VQueueInit
+    call EntsysClear
     call ColorInit
     ld hl, wOAM
     call SpriteInit
@@ -118,4 +117,12 @@ Setup::
 
     ; Jump to main
     jp Main
+;
+
+
+
+SECTION "SETUP VARIBALES", WRAM0
+
+    ; Is set to non-zero when setup is complete.
+    wSetup: ds 1
 ;

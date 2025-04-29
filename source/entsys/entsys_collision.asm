@@ -533,3 +533,13 @@ EntsysDrawBounds2::
     pop bc
     ret
 ;
+
+
+
+SECTION "ENTSYS COLLISION VARIABLES", HRAM
+
+    ; Collision buffer for faster collision routines.
+    hColBuf::
+    hColBuf1:: ds 4
+    hColBuf2:: ds 4
+;

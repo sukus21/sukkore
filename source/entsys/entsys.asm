@@ -444,3 +444,35 @@ EntsysOOB::
     xor a
     ret
 ;
+
+
+
+SECTION "ENTSYS VARIABLES", WRAM0
+    
+    ; Stack-position to exit an entity's gameloop.
+    wEntsysExit:: ds 2
+;
+
+
+
+SECTION "ENTSYS MEMORY", WRAMX, ALIGN[8]
+
+    ; Entity system.
+    wEntsys::
+    FOR ENTITY_CURRENT, ENTSYS_CHUNK_COUNT
+        .bank{d:ENTITY_CURRENT}: ds 1
+        .next{d:ENTITY_CURRENT}: ds 1
+        .step{d:ENTITY_CURRENT}: ds 2
+        .flags{d:ENTITY_CURRENT}: ds 1
+        .ypos{d:ENTITY_CURRENT}: ds 2
+        .xpos{d:ENTITY_CURRENT}: ds 2
+        .height{d:ENTITY_CURRENT}: ds 1
+        .width{d:ENTITY_CURRENT}: ds 1
+        .vars{d:ENTITY_CURRENT}: ds 5
+    ENDR
+    .end::
+
+    ; Entity system allocation status.
+    ; Each bit corresponds to one chunk.
+    wEntsysClusters:: ds ENTSYS_CLUSTER_COUNT
+;

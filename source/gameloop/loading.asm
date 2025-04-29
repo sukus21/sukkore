@@ -258,4 +258,9 @@ TransitionFadeIn::
 
 SECTION "LOADING VARIABLES", WRAM0
 
-wLoadingFrames:: ds 1
+    ; Number of frames the loading gameloop was running.
+    wLoadingFrames:: ds 1
+
+    ; Fade value for scene transitions.
+    wFadeState:: ds 1
+;

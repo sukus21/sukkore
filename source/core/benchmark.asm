@@ -82,3 +82,11 @@ BenchmarkStop::
     ld c, a
     ret
 ;
+
+
+
+SECTION "BENCHMARK VARIABLES", HRAM
+
+    ; When benchmarking, this value is used as the upper 8 bits of the counter.
+    hBenchmark:: ds 1
+;

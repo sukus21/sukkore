@@ -95,3 +95,17 @@ TickRNG:
     xor a, [hl]
     ret
 ;
+
+
+
+SECTION "RNG VARIABLES", HRAM
+
+    ; RNG variables.
+    hRNG::
+
+    ; Seed for the next RNG value.
+    hRNGSeed:: ds 2
+
+    ; Last RNG output.
+    hRNGOut:: ds 2
+;

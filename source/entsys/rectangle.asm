@@ -441,3 +441,11 @@ RectanglePointsDraw::
     ; Return
     ret
 ;
+
+
+
+SECTION "RECTANGLE VARIABLES", WRAM0
+
+    ; Rectangle sprite tile ID
+    wSpriteRectangle:: ds 1
+;

@@ -270,7 +270,7 @@ GameloopError:
         call Strcpy
         ld a, $FF
     .noMessage
-    ldh [hSetup], a
+    ld [wHasMessage], a
 
     ; DMA setup
     call OamDmaInit
@@ -396,7 +396,7 @@ ErrorStatInterrupt:
     ldh a, [rLY]
     cp a, $86
     jr nz, :+
-        ldh a, [hSetup]
+        ld a, [wHasMessage]
         or a, a
         jr z, ErrorWait
     :
@@ -712,4 +712,5 @@ SECTION UNION "WRAMX BUFFER", WRAMX, ALIGN[8]
     wRegisterCacheH: ds 1
     wRegisterCacheL: ds 1
     wRegisterCacheSP: ds 3
+    wHasMessage: ds 1
 ;

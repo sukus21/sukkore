@@ -115,3 +115,11 @@ FarcallHandlerX::
     ld [rROMB0], a
     ret
 ;
+
+
+
+SECTION "FARCALL VARIABLES", HRAM
+
+    ; Which ROM-bank is currently switched in.
+    hBankNumber:: ds 1
+;

@@ -197,3 +197,19 @@ PainterClear::
     pop bc
     ret
 ;
+
+
+
+SECTION "PAINTER VARIABLES", WRAM0
+
+    ; Current painter position.
+    wPainterPosition:: ds 2
+;
+
+
+
+SECTION "PAINTER BUFFER", WRAMX
+
+    ; Paint buffer.
+    wPaint:: ds $400
+;
