@@ -36,8 +36,8 @@ GameloopTest::
 
     ; Set palette
     ld a, %11100100
-    ldh [rBGP], a
-    ldh [rOBP0], a
+    call PaletteSetBGP
+    call PaletteSetOBP0
 
     ; Set screen position
     ld a, -16
