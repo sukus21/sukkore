@@ -36,20 +36,8 @@ VarW0:
         ; Stack-position to exit an entity's gameloop.
         wEntsysExit:: dw $0000
 
-        ; Color palette for CGB mode.
-        wPaletteCGB::
-            color_dmg_wht
-            color_dmg_ltg
-            color_dmg_dkg
-            color_dmg_blk
-            ASSERT high(wPaletteCGB) == high(wPaletteCGB+7)
-        ;
-
         ; Fade value for scene transitions.
         wFadeState:: db $00
-        wPaletteBGP:: dw $0000
-        wPaletteOBP0:: dw $0000
-        wPaletteOBP1:: dw $0000
 
         ; Rectangle sprite tile ID
         wSpriteRectangle:: db $00
@@ -94,9 +82,6 @@ VarH:
 
         ; Is set to non-zero when setup is complete.
         hSetup:: db $FF
-
-        ; Non-zero if CGB-mode is enabled.
-        hIsCGB:: db $FF
 
         ; Which ROM-bank is currently switched in.
         hBankNumber:: db $01

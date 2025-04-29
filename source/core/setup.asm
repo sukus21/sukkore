@@ -14,7 +14,7 @@ Setup::
     call DetectCGB
 
     ; What did we get?
-    ldh [hIsCGB], a
+    ld [wIsCGB], a
     cp a, 0
     jr z, .isDMG
         ; CGB machine
@@ -32,7 +32,7 @@ Setup::
     jr nz, :+
 
         ; Game DOES require GBC functionality
-        ldh a, [hIsCGB]
+        ld a, [wIsCGB]
         cp a, 0
         jr nz, :+
         ld hl, ErrorColorRequired
@@ -95,6 +95,7 @@ Setup::
     ; Setup ALL variables
     farcall VariablesInit
     call VQueueInit
+    call ColorInit
 
     ; Put RNG seed back maybe
     pop af

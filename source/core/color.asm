@@ -1,6 +1,33 @@
 INCLUDE "hardware.inc/hardware.inc"
+INCLUDE "macro/color.inc"
+INCLUDE "macro/memcpy.inc"
 
 SECTION "COLOR", ROM0
+
+; Default CGB palette when running in pseudo-DMG mode.  
+; Lives in ROM0.
+ColorsCGB:
+    color_dmg_wht
+    color_dmg_ltg
+    color_dmg_dkg
+    color_dmg_blk
+.end
+
+
+
+; Initializes pseudo-DMG mode colors.  
+; Lives in ROM0.
+;
+; Saves: none
+ColorInit::
+    memcpy_label ColorsCGB, wPaletteCGB
+    
+    ld hl, wPaletteDMG
+    ld bc, $00_06
+    jp MemsetShort
+;
+
+
 
 ; Detect if current hardware is CGB compatible or not.  
 ; Lives in ROM0.
@@ -65,7 +92,7 @@ DetectCGB::
 SetCPUSpeed::
 
     ; Ignore ENTIRELY if not on a color machine
-    ldh a, [hIsCGB]
+    ld a, [wIsCGB]
     cp a, 0
     ret z
 
@@ -103,7 +130,7 @@ SetCPUSpeed::
 ; - `3`: CGB palette index (0/1)
 MACRO set_palette
     ldh [\1], a
-    ldh a, [hIsCGB]
+    ld a, [wIsCGB]
     or a, a
     ldh a, [\1]
     ret z
@@ -433,4 +460,23 @@ PaletteMakeLighter::
     ; Return
     pop af
     ret 
+;
+
+
+
+SECTION "COLOR VARIABLES", WRAM0, ALIGN[3]
+
+    ; Color palette for CGB mode.  
+    ; Intended for DMG games running in CGB mode.
+    wPaletteCGB:: ds 8
+
+    ; DMG-style color palette for CGB systems.
+    ; Reserves 2 bytes, to allow shifting palette fully in and out.
+    wPaletteDMG::
+    wPaletteBGP:: ds 2
+    wPaletteOBP0:: ds 2
+    wPaletteOBP1:: ds 2
+
+    ; Non-zero if CGB-mode is enabled.
+    wIsCGB:: ds 1
 ;

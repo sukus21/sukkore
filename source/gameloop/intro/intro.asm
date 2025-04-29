@@ -89,7 +89,7 @@ Intro::
     ld bc, IntroTilemap
 
     ; DMG tilemap?
-    ldh a, [hIsCGB]
+    ld a, [wIsCGB]
     or a, a ; cp a, 0
     jr nz, .skip_dmg
         ld bc, IntroTilemap.dmg
@@ -97,7 +97,7 @@ Intro::
     call MapCopyScreen
 
     ; Check if attributes should be set?
-    ldh a, [hIsCGB]
+    ld a, [wIsCGB]
     or a, a ; cp a, 0
     jr z, .skipAttr
 
@@ -294,7 +294,7 @@ IntroFadeOut:
 IntroFading:
 
     ; Check if this is a color machine or not
-    ldh a, [hIsCGB]
+    ld a, [wIsCGB]
     or a, a ; cp a, 0
     jr nz, .isCGB
 
