@@ -15,6 +15,6 @@ DEF CONFIG_BANKABLE_WRAMX EQU 1
 
 ; Toggle if the game makes use of bankable CGB VRAM.
 ; Can be checked at compile time to avoid some bank-switching calls.
-DEF CONFIG_BANKABLE_VRAM EQU 0
+DEF CONFIG_BANKABLE_VRAM EQU 1
 
     ENDC
