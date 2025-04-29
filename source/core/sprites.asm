@@ -3,12 +3,31 @@ INCLUDE "struct/oam_mirror.inc"
 
 SECTION "SPRITES", ROM0
 
+; Initializes a OAM mirror struct.  
+; Lives in ROM0.
+;
+; Input:
+; - `hl`: Pointer to `OAMMIRROR_T` struct
+SpriteInit::
+    ld l, 0
+    ld bc, $00_A0
+    call MemsetShort
+
+    xor a
+    ld l, OAMMIRROR_COUNT
+    ld [hl+], a ; OAMMIRROR_COUNT
+    ld [hl+], a ; OAMMIRROR_PREVIOUS
+    ret
+;
+
+
+
 ; Get one or multiple sprites.  
 ; Lives in ROM0.
 ; 
 ; Input:
 ; - `b`: Sprite count * 4
-; - `h`: High-pointer to OAMMIR struct
+; - `h`: High-pointer to `OAMMIRROR_T` struct
 ;
 ; Returns:
 ; - `hl`: Pointer to sprite slot(s)
@@ -34,7 +53,7 @@ SpriteGet::
 ; Lives in ROM0.
 ;
 ; Input:
-; - `h`: High-pointer to OAMMIR struct
+; - `h`: High-pointer to `OAMMIRROR_T` struct
 ;
 ; Destroys: `l`  
 ; Saves: `bc`, `de`
@@ -43,7 +62,7 @@ SpriteFinish::
     ; Get pointer to first unused sprite
     ld l, OAMMIRROR_PREVIOUS
     ld a, [hl-]
-    ld l, [hl] ; hl = OAMMIR_COUNT
+    ld l, [hl] ; hl = OAMMIRROR_COUNT
 
     ; Cap-fiddling, prevents errors
     cp a, l
@@ -239,4 +258,32 @@ SpriteModifyTemplate::
         ldh [hSpriteIter], a
         jr .loop
     ;
+;
+
+
+
+SECTION "SPRITE TEMPLATE VARIABLES", HRAM
+
+    ; Sprite template attributes
+    hSpriteAttr:: ds 1
+
+    ; Sprite template bitmask
+    hSpriteBits:: ds 1
+
+    ; Sprite template loop counter
+    hSpriteIter:: ds 1
+
+    ; Sprite template X-delta
+    hSpriteXdelta:: ds 1
+
+    ; Sprite template Y-delta
+    hSpriteYdelta:: ds 1
+;
+
+
+
+SECTION "OAM MIRROR", WRAM0, ALIGN[8]
+    ; OAM mirror, used for DMA.
+    wOAM:: ds OAMMIRROR_T
+    ASSERT low(wOAM) == 0
 ;

@@ -96,6 +96,8 @@ Setup::
     farcall VariablesInit
     call VQueueInit
     call ColorInit
+    ld hl, wOAM
+    call SpriteInit
 
     ; Put RNG seed back maybe
     pop af

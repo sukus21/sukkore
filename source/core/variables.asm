@@ -2,7 +2,6 @@ INCLUDE "hardware.inc/hardware.inc"
 INCLUDE "entsys/entsys.inc"
 INCLUDE "macro/color.inc"
 INCLUDE "macro/memcpy.inc"
-INCLUDE "struct/oam_mirror.inc"
 INCLUDE "vqueue/vqueue.inc"
 
 SECTION "VARIABLE INITIALIZATION", ROMX
@@ -62,21 +61,6 @@ VarH:
         hColBuf1:: ds 4
         hColBuf2:: ds 4
 
-        ; Sprite template attributes
-        hSpriteAttr:: ds 1
-
-        ; Sprite template bitmask
-        hSpriteBits:: ds 1
-
-        ; Sprite template loop counter
-        hSpriteIter:: ds 1
-
-        ; Sprite template X-delta
-        hSpriteXdelta:: ds 1
-
-        ; Sprite template Y-delta
-        hSpriteYdelta:: ds 1
-
         ; When benchmarking, this value is used as the upper 8 bits of the counter.
         hBenchmark:: db $00
 
@@ -130,12 +114,4 @@ SECTION UNION "WRAMX BUFFER", WRAMX, ALIGN[8]
 
     ; 256 bytes of memory that can be used for anything.
     wBuffer: ds 256
-;
-
-
-
-SECTION "WRAM0 UNITITIALIZED", WRAM0, ALIGN[8]
-    ; OAM mirror, used for DMA.
-    wOAM:: ds OAMMIRROR_T
-    ASSERT low(wOAM) == 0
 ;
