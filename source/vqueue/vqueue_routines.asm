@@ -90,3 +90,44 @@ MemsetChunked::
     ; Return
     ret
 ;
+
+
+
+; Small custom memory copier.
+; Copies 20*18 (360) bytes, enough to fill the screen.  
+; Every 20 copied bytes, 12 bytes are skipped.  
+; Good for use with the VQueue.  
+; Lives in ROM0.
+;
+; Input:
+; - `hl`: Destination
+; - `bc`: Source
+;
+; Destroys: `e`
+MemcpyScreen::
+    ld e, 18
+
+    .loop
+        ; Copy tilemap to screen, 20 tiles at a time
+        REPT 20
+            ld a, [bc]
+            inc bc
+            ld [hl+], a
+        ENDR
+
+        ; Skip data pointer ahead
+        ld a, l
+        add a, 32 - 20
+        jr nc, :+
+            inc h
+        :
+        ld l, a
+
+        ; End of loop
+        dec e
+        jr nz, .loop
+    ;
+
+    ; Return
+    ret
+;

@@ -89,7 +89,7 @@ Intro::
     jr nz, .skip_dmg
         ld bc, IntroTilemap.dmg
     .skip_dmg
-    call MapCopyScreen
+    call MemcpyScreen
 
     ; Check if attributes should be set?
     ld a, [wIsCGB]
@@ -435,42 +435,6 @@ IntroFadeColor:
     ld l, a
     ret nc
     inc h
-    ret
-;
-
-
-
-; Small custom memory copier.
-; 20*18 (360) bytes, enough to fill the screen.
-; Every 20 copied bytes, 12 bytes are skipped.
-;
-; Input:
-; - `hl`: Destination
-; - `bc`: Source
-;
-; Destroys: `de`
-MapCopyScreen:
-    ld e, 18
-
-    .loop
-        ; Copy tilemap to screen, 20 tiles at a time
-        ld d, 20
-        memcpy_custom hl, bc, d
-
-        ; Skip data pointer ahead
-        ld a, l
-        add a, 32 - 20
-        jr nc, :+
-            inc h
-        :
-        ld l, a
-
-        ; End of loop
-        dec e
-        jr nz, .loop
-    ;
-
-    ; Return
     ret
 ;
 
