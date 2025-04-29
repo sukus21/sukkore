@@ -92,3 +92,18 @@ Main::
     ; Go to gameloop
     jp GameloopTest
 ;
+
+
+
+; Allocate 256 bytes for the stack, just to be safe
+DEF STACK_SIZE EQU $100
+SECTION "STACK", WRAM0[_RAMBANK - STACK_SIZE]
+    ; Top of stack.
+    wStackBegin:: ds STACK_SIZE
+
+    ; Base of stack.
+    wStack:: ds $00
+
+    ; Make sure things work out
+    ASSERT wStackBegin + STACK_SIZE == _RAMBANK
+;

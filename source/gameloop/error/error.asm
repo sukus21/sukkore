@@ -174,7 +174,7 @@ GameloopError:
     ld [hl+], a
     ldh a, [rIF]
     ld [hl+], a
-    ld sp, w_stack
+    ld sp, wStack
 
     ; Is LCD already disabled?
     ld hl, rLCDC

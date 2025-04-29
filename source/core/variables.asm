@@ -5,21 +5,6 @@ INCLUDE "macro/memcpy.inc"
 INCLUDE "struct/oam_mirror.inc"
 INCLUDE "vqueue/vqueue.inc"
 
-; Allocate 256 bytes for the stack, just to be safe
-DEF STACK_SIZE EQU $100
-SECTION "STACK", WRAM0[_RAMBANK - STACK_SIZE]
-    ; Top of stack.
-    w_stack_begin:: ds STACK_SIZE
-
-    ; Base of stack.
-    w_stack:: ds $00
-
-    ; Make sure things work out
-    ASSERT w_stack_begin + STACK_SIZE == _RAMBANK
-;
-
-
-
 SECTION "VARIABLE INITIALIZATION", ROMX
 
 ; Initializes ALL variables.

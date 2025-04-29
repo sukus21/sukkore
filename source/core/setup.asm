@@ -7,7 +7,7 @@ SECTION "SETUP", ROM0
 ; Supposed to run first thing when the game starts.
 ; Lives in ROM0.
 Setup::
-    ld sp, w_stack
+    ld sp, wStack
     call OamDmaInit
 
     ; Is this GBC hardware?
@@ -67,7 +67,7 @@ Setup::
     res LCDCB_ON, [hl]
 
     ; Reset stack pointer
-    ld sp, w_stack
+    ld sp, wStack
 
     ; Check if RNG seed should be saved
     ldh a, [hSetup]
