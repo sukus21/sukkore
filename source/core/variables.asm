@@ -92,14 +92,6 @@ VarH:
         ; When benchmarking, this value is used as the upper 8 bits of the counter.
         hBenchmark:: db $00
 
-        ; Bitfield of buttons held.
-        ; Use with `PADB_*` or `PADF_*` from `hardware.inc`.
-        hInput:: db $FF
-
-        ; Bitfield of buttons held.
-        ; Use with `PADB_*` or `PADF_*` from `hardware.inc`.
-        hInputPressed:: db $00
-
         ; Is set to non-zero when setup is complete.
         hSetup:: db $FF
 

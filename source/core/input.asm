@@ -1,6 +1,7 @@
 INCLUDE "hardware.inc/hardware.inc"
 
 SECTION "INPUT", ROM0
+
 ; Gets the current buttons pressed.
 ; Bits 0-3 = buttons, bits 4-7 = dpad.  
 ; Lives in ROM0.
@@ -44,16 +45,28 @@ ReadInput::
 
     ; Get buttons pressed
     ld b, a
-    ldh a, [hInput]
+    ld a, [wInput]
     xor a, b
     and a, b
-    ldh [hInputPressed], a
+    ld [wInputPressed], a
     ld c, a
     ld a, b
-    ldh [hInput], a
+    ld [wInput], a
 
     ; Reset input register and return
     ld a, $FF
     ldh [rP1], a
     ret
+;
+
+
+
+SECTION "INPUT VARIABLES", WRAM0
+    ; Bitfield of buttons held.
+    ; Use with `PADB_*` or `PADF_*` from `hardware.inc`.
+    wInput:: ds 1
+
+    ; Bitfield of buttons held.
+    ; Use with `PADB_*` or `PADF_*` from `hardware.inc`.
+    wInputPressed:: ds 1
 ;

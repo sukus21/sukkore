@@ -106,7 +106,7 @@ GameloopTest::
     ld [hl], VTI_ENTALLOC_CURSOR
 
     ; Allocate new entity
-    ldh a, [hInputPressed]
+    ld a, [wInputPressed]
     bit PADB_A, a
     jr z, .noAlloc
         ld c, 1
@@ -136,7 +136,7 @@ GameloopTest::
     .noAlloc
 
     ; Free entities
-    ldh a, [hInputPressed]
+    ld a, [wInputPressed]
     ld b, a
     ld hl, wAllocationDemoX
     ld a, [hl+]
@@ -196,7 +196,7 @@ GameloopTest::
     ld [hl], VTI_ENTALLOC_CURSOR
 
     ; Actually free entities
-    ldh a, [hInputPressed]
+    ld a, [wInputPressed]
     bit PADB_B, a
     jr z, .noFree
         ld c, 1
