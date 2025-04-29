@@ -273,7 +273,7 @@ GameloopError:
     ldh [hSetup], a
 
     ; DMA setup
-    call dma_init
+    call OamDmaInit
 
     ; Load face graphics into VRAM
     ld hl, $9000

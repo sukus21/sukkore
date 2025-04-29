@@ -8,7 +8,7 @@ SECTION "SETUP", ROM0
 ; Lives in ROM0.
 Setup::
     ld sp, w_stack
-    call dma_init
+    call OamDmaInit
 
     ; Is this GBC hardware?
     call DetectCGB

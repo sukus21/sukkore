@@ -5,23 +5,6 @@ INCLUDE "macro/memcpy.inc"
 INCLUDE "struct/oam_mirror.inc"
 INCLUDE "vqueue/vqueue.inc"
 
-SECTION "DMA INIT", ROM0
-
-; Initializes DMA routine only.
-; Lives in ROM0.
-;
-; Saves: none
-dma_init::
-    ld hl, hDMA
-    ld bc, VarH + (hDMA - hVariables)
-    ld d, hDMA.end - hDMA
-
-    ; Return directly after copying
-    jp MemcpyShort
-;
-
-
-
 ; Allocate 256 bytes for the stack, just to be safe
 DEF STACK_SIZE EQU $100
 SECTION "STACK", WRAM0[_RAMBANK - STACK_SIZE]
@@ -120,33 +103,6 @@ VarH:
 
         ; Sprite template Y-delta
         hSpriteYdelta:: ds 1
-
-        ; Run OAM DMA with a pre-specified input.  
-        ; Interrupts should be disabled while this runs.  
-        ; Assumes OAM access.
-        ;
-        ; Input:
-        ; - `a`: High byte of OAM table
-        ;
-        ; Destroys: `af`
-        hDMA::
-            ldh [rDMA], a
-
-            ; Wait until transfer is complete
-            ld a, 40
-            .wait
-            dec a
-            jr nz, .wait
-
-            ; Return
-            ret
-            .end
-        ;
-
-        ; LYC interrupt jump-to routine.
-        ; Contains a single `jp n16` instruction.
-        ; The pointer can be overwritten to whatever you want to jump to.
-        hLYC:: jp vError
 
         ; When benchmarking, this value is used as the upper 8 bits of the counter.
         hBenchmark:: db $00
