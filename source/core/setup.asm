@@ -35,7 +35,7 @@ Setup::
         cp a, 0
         jr nz, :+
         ld hl, ErrorColorRequired
-        rst vError
+        rst VecError
     :
 
     ; Set setup variable to true
@@ -93,7 +93,7 @@ Setup::
 
     ; Setup ALL variables
     call VQueueInit
-    call EntsysClear
+    call EntsysInit
     call ColorInit
     ld hl, wOAM
     call SpriteInit

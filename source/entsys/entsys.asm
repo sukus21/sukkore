@@ -127,7 +127,7 @@ EntsysNew16::
     ; No chunks available
     .overflow
         ld hl, ErrorEntityOverflow
-        rst vError
+        rst VecError
     ;
 ;
 
@@ -212,7 +212,7 @@ EntsysNew32::
     ; No chunks available
     .overflow
         ld hl, ErrorEntityOverflow
-        rst vError
+        rst VecError
     ;
 ;
 
@@ -288,7 +288,7 @@ EntsysNew64::
     ; No chunks available
     .overflow
         ld hl, ErrorEntityOverflow
-        rst vError
+        rst VecError
     ;
 ;
 
@@ -353,11 +353,11 @@ EntsysFree::
 
 
 
-; Clears the entire entity system.  
+; Initializes / clears the entire entity system.  
 ; Lives in ROM0.
 ;
 ; Saves: `de`
-EntsysClear::
+EntsysInit::
     ; Initialize entity system
     ld hl, wEntsys
     xor a

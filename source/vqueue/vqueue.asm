@@ -58,7 +58,7 @@ VQueueGet::
     cp a, [hl] ; hl = wVQueueCurrent
     jr nz, :+
         ld hl, ErrorVQueueOverflow
-        rst vError
+        rst VecError
     :
 
     ; Yes, good, return

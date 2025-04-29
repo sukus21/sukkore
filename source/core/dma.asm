@@ -41,6 +41,6 @@ LOAD "OAM DMA ROUTINE", HRAM
     ; LYC interrupt jump-to routine.
     ; Contains a single `jp n16` instruction.
     ; The pointer can be overwritten to whatever you want to jump to.
-    hLYC:: jp vError
+    hLYC:: jp VecError
 ENDL
 .end

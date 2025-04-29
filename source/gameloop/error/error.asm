@@ -9,7 +9,7 @@ SECTION "ERROR SCREEN VECTOR", ROM0[$0038]
 ;
 ; Input:
 ; - `hl`: Pointer to error message
-vError::
+VecError::
     jp ErrorStart
 ;
 
