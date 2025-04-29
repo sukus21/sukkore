@@ -259,6 +259,32 @@ WaitScanline::
 
 
 
+; Halts the CPU and returns once in VBlank.
+; If the LCD is not on, returns immediately.  
+; Disables IME, and overwrites `rIE` and `rIF`.  
+; Lives in ROM0.
+WaitVBlank::
+    di
+
+    ; Is LCD not on?
+    ldh a, [rLCDC]
+    bit LCDCB_ON, a
+    ret z
+
+    ; Enable only VBlank interrupts
+    ld a, IEF_VBLANK
+    ldh [rIE], a
+    xor a
+    ldh [rIF], a
+
+    ; Halt CPU, then return once it wakes up in VBlank
+    halt
+    nop
+    ret
+;
+
+
+
 ; Converts a binary value to BCD.  
 ; Lives in ROM0.
 ;

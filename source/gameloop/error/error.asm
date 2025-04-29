@@ -419,10 +419,7 @@ ErrorStatInterrupt:
     ldh [rSCX], a
 
     ; This is the final scanline, just wait for VBlank
-    ld a, IEF_VBLANK
-    ldh [rIE], a
-    halt
-    nop
+    call WaitVBlank
 
 
 
@@ -456,7 +453,7 @@ ErrorStatInterrupt:
     :
 
     bit PADB_START, c
-    jp nz, Setup.partial
+    jp nz, Main
 
     ; Save things on the stack
     push hl

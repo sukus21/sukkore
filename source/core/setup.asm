@@ -52,16 +52,8 @@ Setup::
     ; Lives in ROM0.
     .partial::
 
-    ; Wait for Vblank
-    di
-    xor a
-    ldh [rIF], a
-    ld a, IEF_VBLANK
-    ldh [rIE], a
-    halt
-    nop
-
-    ; Disable LCD
+    ; Wait for Vblank and disable LCD
+    call WaitVBlank
     ld hl, rLCDC
     res LCDCB_ON, [hl]
 

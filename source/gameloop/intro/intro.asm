@@ -64,12 +64,7 @@ Intro::
     ld [wIntroTimer], a
 
     ; Wait for VBLANK
-    xor a
-    ldh [rIF], a
-    ld a, IEF_VBLANK
-    ldh [rIE], a
-    halt
-    nop
+    call WaitVBlank
 
     ; There is Vblank!
     ; Disable LCD
@@ -140,13 +135,7 @@ Intro::
 
     ; Show the still image for a bit
     .fadeNone
-        ; Wait for Vblank
-        xor a
-        ldh [rIF], a
-        ld a, IEF_VBLANK
-        ldh [rIE], a
-        halt
-        nop
+        call WaitVBlank
 
         ; Set default palette
         ld a, %11100100
@@ -166,12 +155,7 @@ Intro::
     call IntroFadeOut
 
     ; Wait for Vblank again
-    xor a
-    ldh [rIF], a
-    ld a, IEF_VBLANK
-    ldh [rIE], a
-    halt
-    nop
+    call WaitVBlank
 
     ; Return
     ret
@@ -203,13 +187,7 @@ IntroFadeIn:
 
     ; Fade in
     .fadeIn
-        ; Wait for Vblank
-        xor a
-        ldh [rIF], a
-        ld a, IEF_VBLANK
-        ldh [rIE], a
-        halt
-        nop
+        call WaitVBlank
 
         ; Do the fading
         ld hl, wIntroTimer
@@ -251,13 +229,7 @@ IntroFadeOut:
 
     ; Fade colors out
     .fadeOut
-        ; Wait for Vblank (again)
-        xor a
-        ldh [rIF], a
-        ld a, IEF_VBLANK
-        ldh [rIE], a
-        halt
-        nop
+        call WaitVBlank
 
         ; Fade out
         ld hl, wIntroTimer

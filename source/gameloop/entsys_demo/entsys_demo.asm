@@ -57,17 +57,10 @@ GameloopTest::
     ld a, high(wOAM)
     call hDMA
 
-    ; Enable Vblank interrupt
-    xor a
-    ldh [rIF], a
-    ld a, IEF_VBLANK
-    ldh [rIE], a
-
     ; Enable LCD
     ld a, LCDCF_ON | LCDCF_OBJON | LCDCF_BGON | LCDCF_BLK01
     ldh [rLCDC], a
-    halt
-    nop
+    call WaitVBlank
 
     ; Main loop
     .loop

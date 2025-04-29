@@ -18,15 +18,8 @@ GameloopLoading::
         ld hl, wLoadingFrames
         inc [hl]
 
-        ; Enable only V-blank
-        ld a, IEF_VBLANK
-        ldh [rIE], a
-
-        ; Clear current interrupts (if present)
-        xor a
-        ldh [rIF], a
-        halt
-        nop
+        ; Wait for VBlank
+        call WaitVBlank
 
         ; Now in V-blank
         call VQueueExecute
