@@ -1,6 +1,7 @@
 INCLUDE "hardware.inc/hardware.inc"
 INCLUDE "macro/color.inc"
 INCLUDE "macro/memcpy.inc"
+INCLUDE "vqueue/vqueue.inc"
 
 SECTION "COLOR", ROM0
 
@@ -75,6 +76,7 @@ DetectCGB::
 
     ; Return
     ld a, d
+    ld [wIsCGB], a
     ret
 ;
 
@@ -128,6 +130,8 @@ SetCPUSpeed::
 ; - `1`: DMG register
 ; - `2`: CGB palette specify register
 ; - `3`: CGB palette index (0/1)
+;
+; Destroys: `f`
 MACRO set_palette
     ldh [\1], a
     ld a, [wIsCGB]
@@ -461,6 +465,11 @@ PaletteMakeLighter::
     pop af
     ret 
 ;
+
+
+
+; Prepared VQueue transfer which resets all tilemap attributes.
+ColorVQueueResetAttributes:: vqueue_prepare_memset _SCRN0, 0, $800, 1, 0
 
 
 
