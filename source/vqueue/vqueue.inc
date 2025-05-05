@@ -140,7 +140,7 @@ ENDM
 ; - `4`: writeback pointer (label/n16)
 MACRO vqueue_prepare_1bpp
     IF (\2.end - \2) % 8 == 0
-        vqueue_prepare MemcpyTile1BPP, \1, \2, (\2.end - \2) << 4, $0000, \4, \3, bank(\2)
+        vqueue_prepare MemcpyTile1BPP, \1, \2, (\2.end - \2) << 5, $0000, \4, \3, bank(\2)
     ELSE
         vqueue_prepare Memcpy1BPP, \1, \2, (\2.end - \2), $0000, \4, \3, bank(\2)
     ENDC
