@@ -6,9 +6,11 @@ INCLUDE "gameloop/entsys_demo/vram.inc"
 
 SECTION "TESTLOOP DATA", ROMX
 
-TestloopFont:
-    INCBIN "gameloop/entsys_demo/font.tls"
-    INCBIN "gameloop/entsys_demo/chunks.tls"
+TestloopFont: INCBIN "font.1bpp"
+.end
+TestloopSlots: INCBIN "gameloop/entsys_demo/slots.2bpp"
+.end
+TestloopCursor: INCBIN "gameloop/entsys_demo/cursor.2bpp"
 .end
 
 TestloopStr:
@@ -19,7 +21,10 @@ TestloopStr:
 
 TestloopTransfers:
     vqueue_prepare_memset VM_ENTALLOC_CHUNKS, 0, 32*32, 0, 0
-    vqueue_prepare_memcpy VT_ENTALLOC_FONT, TestloopFont, 0, 0
+    vqueue_prepare_1bpp VT_ENTALLOC_FONT, TestloopFont, 0, 0
+    vqueue_prepare_memcpy VT_ENTALLOC_CHUNKS, TestloopSlots, 0, 0
+    vqueue_prepare_memcpy VT_ENTALLOC_CURSOR, TestloopCursor, 0, 0
+    vqueue_prepare PalsetDMG, %1_11100100, %1_11011100
 ;
 
 SECTION "GAMELOOP TEST", ROM0
@@ -30,14 +35,9 @@ SECTION "GAMELOOP TEST", ROM0
 ; Lives in ROM0.
 GameloopTest::
     ld de, TestloopTransfers
-    ld b, 2
+    ld b, 5
     call VQueueEnqueueMulti
     call GameloopLoading
-
-    ; Set palette
-    ld a, %11100100
-    call PaletteSetBGP
-    call PaletteSetOBP0
 
     ; Set screen position
     ld a, -16
