@@ -60,21 +60,20 @@ Sine:
     PURGE SCALE
 ;
 
-
 ; Background tileset
-ErrorTiles: INCBIN "gameloop/error/face.tls"
+ErrorTiles: INCBIN "gameloop/error/face.1bpp"
 .end
 
 ; Sprite tiles
-ErrorSprites: INCBIN "gameloop/error/sprites.tls"
+ErrorSprites: INCBIN "gameloop/error/sprites.2bpp"
 .end
 
 ; Font tiles
-ErrorFont: INCBIN "gameloop/error/font.tls"
+ErrorFont: INCBIN "gameloop/error/font.1bpp"
 .end
 
 ; Tilemap data
-ErrorMap: INCBIN "gameloop/error/face.tlm"
+ErrorMap: INCBIN "gameloop/error/face.tilemap"
 .end
 
 ; Sprite initialization data
@@ -278,25 +277,25 @@ GameloopError:
     ; Load face graphics into VRAM
     ld hl, $9000
     ld bc, ErrorTiles
-    ld de, $0800
-    call Memcpy
+    ld de, $400
+    call Memcpy1BPP
     ld hl, $8800
-    ld de, ErrorTiles.end - ErrorTiles - $0800
-    call Memcpy
+    ld de, ErrorTiles.end - ErrorTiles - $0400
+    call Memcpy1BPP
 
     ; Load numbers into VRAM
     ld hl, $8900
-    ld bc, ErrorFont + $100
-    ld de, 16*10
-    call Memcpy
-    ld bc, ErrorFont + 33*16
-    ld de, 16*6
-    call Memcpy
+    ld bc, ErrorFont + ("0" - " ") * 8
+    ld de, 10 * 8
+    call Memcpy1BPP
+    ld bc, ErrorFont + ("A" - " ") * 8
+    ld de, 6 * 8
+    call Memcpy1BPP
 
     ; Copy font into VRAM
     ld bc, ErrorFont
-    ld de, $0600
-    call Memcpy
+    ld de, ErrorFont.end - ErrorFont
+    call Memcpy1BPP
 
     ; Copy sprites into VRAM
     ld hl, $8000
@@ -335,9 +334,9 @@ GameloopError:
     jr nz, .loop
 
     ; Set DMG palettes
-    ld a, %00110011
+    ld a, %00011011
     ldh [rBGP], a
-    ld a, %11000100
+    ld a, %00011100
     ldh [rOBP0], a
 
     ; Set sprite data
@@ -690,9 +689,10 @@ ErrorMessages:
 
     ; Strings containing error messages
     ErrorStrings:
-    ErrorEntityOverflow::  create_message "ENTITY OVERFLOW"
-    ErrorColorRequired::   create_message "ONLY PLAYS ON CGB"
-    ErrorVQueueOverflow::  create_message "VQUEUE OVERFLOW"
+    ErrorEntityOverflow::   create_message "ENTITY OVERFLOW"
+    ErrorColorRequired::    create_message "ONLY PLAYS ON CGB"
+    ErrorVQueueOverflow::   create_message "VQUEUE OVERFLOW"
+    ErrorTest::             create_message "TEST"
     POPC
 ;
 
