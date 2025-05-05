@@ -14,7 +14,54 @@ def escapeCli(inArgs):
             outArgs.append("\"" + arg.replace("\"", "\\\"") + "\"")
     return outArgs
 
-def assembleFile(srcPath):
+def buildGfxFile(srcPath):
+    srcName, srcExt = os.path.splitext(srcPath)
+    if srcExt != ".png" or (not srcName.endswith(".1bpp") and not srcName.endswith(".2bpp")):
+        return False
+
+    bpp = "1" if srcName.endswith(".1bpp") else "2"
+    objPath = os.path.join("build", "gfx", srcName)
+    flgPath = srcName + ".flags"
+    hasFlg = os.path.exists(flgPath)
+
+    # Ignore file if object is newer
+    if os.path.exists(objPath):
+        objTime = os.path.getmtime(objPath)
+        srcTime = os.path.getmtime(srcPath)
+        flgTime = os.path.getmtime(flgPath) if hasFlg else srcTime
+
+        if (objTime >= srcTime and objTime >= flgTime) and dirtyCheck:
+            return False
+
+    # Convert file
+    os.makedirs(os.path.dirname(objPath), exist_ok=True)
+    args = ["rgbgfx", srcPath, "-o", objPath, "-d", bpp]
+    if hasFlg:
+        args += "-O", "@" + flgPath
+    
+    print(" ".join(escapeCli(args)))
+    result = cmd.run(args, stdout=sys.stdout, stderr=sys.stderr)
+
+    # Mark as error on fail
+    return result.returncode != 0
+
+def buildGfxFolder(path):
+    totalDirs = []
+    isError = False
+
+    for root, dirs, files in os.walk(path):
+        totalDirs += dirs
+        for filename in files:
+            error = buildGfxFile(os.path.join(root, filename))
+            isError = isError or error
+
+    for dirname in totalDirs:
+        error = buildGfxFolder(os.path.join(root, dirname))
+        isError = isError or error
+    
+    return isError
+
+def buildAsmFile(srcPath):
     srcName, srcExt = os.path.splitext(srcPath)
     if srcExt != ".asm":
         return (None, False)
@@ -30,14 +77,14 @@ def assembleFile(srcPath):
 
     # Assemble file
     os.makedirs(os.path.dirname(objPath), exist_ok=True)
-    args = ["rgbasm", "-p", "255", "-i", "source", "-o", objPath, srcPath]
+    args = ["rgbasm", "-p", "255", "-i", "source", "-i", "build/gfx/source", "-o", objPath, srcPath]
     print(" ".join(escapeCli(args)))
     result = cmd.run(args, stdout=sys.stdout, stderr=sys.stderr)
 
     # Mark as error on fail
     return (objPath, result.returncode != 0)
 
-def assembleFolder(path):
+def buildAsmFolder(path):
     totalDirs = []
     objects = []
     isError = False
@@ -45,25 +92,33 @@ def assembleFolder(path):
     for root, dirs, files in os.walk(path):
         totalDirs += dirs
         for filename in files:
-            newObject, error = assembleFile(os.path.join(root, filename))
+            newObject, error = buildAsmFile(os.path.join(root, filename))
             isError = isError or error
             if newObject is not None:
                 objects.append(newObject)
 
     for dirname in totalDirs:
-        newObjects, error = assembleFolder(os.path.join(root, dirname))
+        newObjects, error = buildAsmFolder(os.path.join(root, dirname))
         isError = isError or error
         objects += newObjects
     
     return (objects, isError)
 
 def build():
+    # Convert graphics using rgbgfx
+    print("\nRGBGFX build step...")
+    error = buildGfxFolder("source")
+    if error == True:
+        os._exit(1)
+
     # Assemble source files with rgbasm
-    (objects, error) = assembleFolder("source")
+    print("\nRGBASM step...")
+    (objects, error) = buildAsmFolder("source")
     if error == True:
         os._exit(1)
 
     # Link objects with rgblink
+    print("\nRGBLINK step...")
     output = os.path.join("build", "build")
     args = ["rgblink", "-p", "255", "-m", output+".map", "-n", output+".sym", "-o", output+".gb"] + objects
     print(" ".join(escapeCli(args)))
@@ -72,7 +127,8 @@ def build():
         os._exit(1)
 
     # Fix ROM header using rgbfix
-    args = ["rgbfix", "-v", "-j", "-c", "-p", "255", "-t", "PROJECT", "-m", "MBC1", output+".gb"]
+    print("\nRGBFIX step...")
+    args = ["rgbfix", "-v", "-j", "-c", "-p", "255", "-t", "SUKKORE", "-m", "MBC1", output+".gb"]
     print(" ".join(escapeCli(args)))
     result = cmd.run(args, stdout=sys.stdout, stderr=sys.stderr)
     if result.returncode != 0:

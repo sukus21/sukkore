@@ -3,6 +3,7 @@
         "editor.autoIndent": "keep"
     },
     "rgbdsz80.includePath": [
+        "build/gfx/source",
         "source"
     ]
 }
