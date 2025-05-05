@@ -129,6 +129,25 @@ ENDM
 
 
 
+; Prepares a label to be copied to VRAM.
+; Automatically tries to optimize using chunked transfer if possible.
+; This macro expands to 16 bytes of data.
+;
+; Input:
+; - `1`: destination (label/n16)
+; - `2`: source (label)
+; - `3`: destination bank (n8)
+; - `4`: writeback pointer (label/n16)
+MACRO vqueue_prepare_1bpp
+    IF (\2.end - \2) % 8 == 0
+        vqueue_prepare MemcpyTile1BPP, \1, \2, (\2.end - \2) << 4, $0000, \4, \3, bank(\2)
+    ELSE
+        vqueue_prepare Memcpy1BPP, \1, \2, (\2.end - \2), $0000, \4, \3, bank(\2)
+    ENDC
+ENDM
+
+
+
 ; Prepares data to be filled in VRAM.
 ; This macro expands to 16 bytes of data.
 ;

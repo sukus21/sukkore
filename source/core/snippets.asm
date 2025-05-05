@@ -35,6 +35,41 @@ Memcpy::
 
 
 ; Copies data from one location to another using the CPU.  
+; Source bytes are written to the destination TWICE.  
+; Byte count is number of source bytes.  
+; Lives in ROM0.
+;
+; Input:
+; - `hl`: Destination
+; - `bc`: Source
+; - `de`: Byte count
+;
+; Returns:
+; - `hl`: Destination + Byte count * 2
+; - `bc`: Source + Byte count
+;
+; Destroys: `af`, `de`
+Memcpy1BPP::
+
+    ; Copy the data
+    ld a, [bc]
+    ld [hl+], a
+    ld [hl+], a
+    inc bc
+    dec de
+
+    ; Check byte count
+    ld a, d
+    or e
+    jr nz, Memcpy1BPP
+
+    ; Return
+    ret 
+;
+
+
+
+; Copies data from one location to another using the CPU.  
 ; Lives in ROM0.
 ;
 ; Input:
