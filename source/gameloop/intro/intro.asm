@@ -41,16 +41,16 @@ IntroPalettes:
     .black      white_fade  0,  0,  0
 ;
 
-; Tilemap data for DMG logo.
-IntroTilemapDMG: INCBIN "gameloop/intro/sukus_dmg.tlm"
+; Tilemap data for DMG splash screen.
+IntroTilemapDMG: INCBIN "gameloop/intro/splash_dmg.tilemap"
 .end
 
-; Tilemap data for DMG logo.
-IntroTilemapCGB: INCBIN "gameloop/intro/sukus_cgb.tlm"
+; Tilemap data for CGB splash screen.
+IntroTilemapCGB: INCBIN "gameloop/intro/splash_cgb.tilemap"
 .end
 
-; Tileset for logo and font.
-IntroTileset: INCBIN "gameloop/intro/intro.tls"
+; Tileset for splash screen.
+IntroTileset: INCBIN "gameloop/intro/splash_cgb.2bpp"
 .end
 
 ; Prepared VQueue transfers for DMG
