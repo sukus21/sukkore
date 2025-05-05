@@ -53,12 +53,20 @@ IntroTilemapCGB: INCBIN "gameloop/intro/sukus_cgb.tlm"
 IntroTileset: INCBIN "gameloop/intro/intro.tls"
 .end
 
-; Prepared VQueue transfers
-IntroVQueueTileset:     vqueue_prepare_memcpy VT_INTRO_TILES, IntroTileset, 0, 0
-IntroVQueueTilemapDMG:  vqueue_prepare MemcpyScreen, VM_INTRO_SPLASH, IntroTilemapDMG
-IntroVQueueTilemapCGB:  vqueue_prepare MemcpyScreen, VM_INTRO_SPLASH, IntroTilemapCGB
-IntroVQueueAttributes:  vqueue_prepare_memset VM_INTRO_SPLASH, 1, $400, 1, 0
-IntroVQueueFace:        vqueue_prepare IntroSetFaceAttributes, VM_INTRO_FACE, 0, 0, 0, 0, 1
+; Prepared VQueue transfers for DMG
+IntroVQueueDMG:
+    vqueue_prepare PalsetDMG, %1_00000000, %1_00000000, %1_00000000
+    vqueue_prepare_memcpy VT_INTRO_TILES, IntroTileset, 0, 0
+    vqueue_prepare MemcpyScreen, VM_INTRO_SPLASH, IntroTilemapDMG
+;
+
+; Prepared VQueue transfers for CGB
+IntroVQueueCGB:
+    vqueue_prepare_memcpy VT_INTRO_TILES, IntroTileset, 0, 0
+    vqueue_prepare MemcpyScreen, VM_INTRO_SPLASH, IntroTilemapCGB
+    vqueue_prepare_memset VM_INTRO_SPLASH, 1, $400, 1, 0
+    vqueue_prepare IntroSetFaceAttributes, VM_INTRO_FACE, 0, 0, 0, 0, 1
+;
 
 
 
@@ -104,22 +112,17 @@ Intro::
     xor a
     ld [wIntroTimer], a
 
-    ; Set up VQueue tilemap transfer
-    ld de, IntroVQueueTileset
-    ld b, 1
-    call VQueueEnqueueMulti
-
-    ; Set up tilemap transfers as well
+    ; Set up VQueue transfers
     ld a, [wIsCGB]
     or a, a ; cp a, 0
     jr z, .isDMG
-        ld de, IntroVQueueTilemapCGB
-        ld b, 3
+        ld de, IntroVQueueCGB
+        ld b, 4
         call VQueueEnqueueMulti
         jr .queued
     .isDMG
-        ld de, IntroVQueueTilemapDMG
-        ld b, 1
+        ld de, IntroVQueueDMG
+        ld b, 3
         call VQueueEnqueueMulti
     .queued
 

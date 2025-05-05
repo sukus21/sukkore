@@ -1,3 +1,4 @@
+INCLUDE "hardware.inc/hardware.inc"
 
 
 SECTION "VQUEUE ROUTINES", ROM0
@@ -129,5 +130,41 @@ MemcpyScreen::
     ;
 
     ; Return
+    ret
+;
+
+
+
+; VQueue routine to set DMG color palettes.  
+; Lives in ROM0.
+;
+; Input:
+; - `h`: change BGP
+; - `l`: BGP value
+; - `b`: change OBP0
+; - `c`: OBP0 value
+; - `d`: change OBP1
+; - `e`: OBP1 value
+PalsetDMG::
+
+    ; First BGP...
+    ld a, h
+    or a, a
+    ld a, l
+    call nz, PaletteSetBGP
+
+    ; Then OBP0...
+    ld a, b
+    or a, a
+    ld a, c
+    call nz, PaletteSetOBP0
+
+    ; Finally OBP1...
+    ld a, d
+    or a, a
+    ld a, e
+    call nz, PaletteSetOBP1
+
+    ; That was easy
     ret
 ;
