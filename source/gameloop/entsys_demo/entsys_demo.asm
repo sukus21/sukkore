@@ -35,6 +35,10 @@ SECTION "GAMELOOP TEST", ROM0
 ; Lives in ROM0.
 GameloopTest::
     ld de, TestloopTransfers
+    IF CONFIG_BANKABLE_ROMX
+        ld a, bank(TestloopTransfers)
+        ld [rROMB0], a
+    ENDC
     ld b, 5
     call VQueueEnqueueMulti
     call GameloopLoading
@@ -341,7 +345,7 @@ GameloopTest::
 
 
 
-SECTION UNION "WRAMX BUFFER", WRAMX, ALIGN[8]
+SECTION UNION "GAMELOOP UNION", WRAM0, ALIGN[8]
 
 wAllocationDemoStatus: ds 128
 wAllocationDemoX: ds 1
