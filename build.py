@@ -67,17 +67,47 @@ def buildAsmFile(srcPath):
         return (None, False)
 
     objPath = os.path.join("build", "obj", srcName) + ".o"
+    depPath = os.path.join("build", "dep", srcName) + ".txt"
 
-    # Ignore file if object is newer
-    if os.path.exists(objPath):
+    # Object file already exists, should we rebuild?
+    if dirtyCheck and os.path.exists(objPath):
+        
+        # Read dependency file
+        dependencies = [srcPath]
+        if os.path.exists(depPath):
+            depFile = open(depPath)
+            for line in depFile: 
+                offset = line.find(": ")
+                dependency = line[offset + 2:-1]
+                if os.path.exists(dependency):
+                    dependencies += [dependency]
+
+        # Check if dependencies are newer
+        shouldRebuild = False
         objTime = os.path.getmtime(objPath)
-        srcTime = os.path.getmtime(srcPath)
-        if objTime >= srcTime and dirtyCheck:
+        for dependency in dependencies:
+            depTime = os.path.getmtime(dependency)
+            if depTime >= objTime:
+                shouldRebuild = True
+        
+        # Skip building if no changes
+        if not shouldRebuild:
             return (objPath, False)
 
-    # Assemble file
+    # Make directories
     os.makedirs(os.path.dirname(objPath), exist_ok=True)
-    args = ["rgbasm", "-p", "255", "-i", "source", "-i", "build/gfx/source", "-o", objPath, srcPath]
+    os.makedirs(os.path.dirname(depPath), exist_ok=True)
+
+    # Assemble file
+    args = [
+        "rgbasm",
+        "-p", "255",
+        "-i", "source",
+        "-i", "build/gfx/source",
+        "-o", objPath,
+        "-M", depPath,
+        srcPath,
+    ]
     print(" ".join(escapeCli(args)))
     result = cmd.run(args, stdout=sys.stdout, stderr=sys.stderr)
 
