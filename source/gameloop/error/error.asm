@@ -1,6 +1,7 @@
 INCLUDE "hardware.inc/hardware.inc"
 INCLUDE "macro/color.inc"
 
+
 SECTION "ERROR SCREEN VECTOR", ROM0[$0038]
     
 ; Switches bank and jumps.  
@@ -693,6 +694,8 @@ ErrorMessages:
     ErrorColorRequired::    create_message "ONLY PLAYS ON CGB"
     ErrorVQueueOverflow::   create_message "VQUEUE OVERFLOW"
     ErrorTest::             create_message "TEST"
+    ErrorRomXBankMarker::   create_message "ROMX BANK W/O MARK"
+    ErrorRomXBankCount::    create_message "BAD ROMX BANK COUNT"
     POPC
 ;
 

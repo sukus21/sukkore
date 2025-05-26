@@ -1,6 +1,14 @@
     IF !DEF(CONFIG_INC)
     DEF CONFIG_INC EQU 1
 
+; Determines if dev mode is enabled or not.
+; Set this flag to 0 when building the final release.
+DEF CONFIG_DEV EQU 1
+
+; Number of total ROM banks, including ROM0.
+; This has to be manually updated as the ROM size grows.
+DEF CONFIG_ROM_BANK_COUNT EQU 2
+
 ; Toggle if banking is enabled for ROMX.
 ; Can be checked at compile time to avoid some bank-switching calls.
 DEF CONFIG_BANKABLE_ROMX EQU 1

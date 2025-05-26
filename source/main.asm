@@ -1,5 +1,6 @@
 INCLUDE "hardware.inc/hardware.inc"
 INCLUDE "macro/farcall.inc"
+INCLUDE "config.inc"
 
 
 SECTION "NOTICE", ROM0[$0000]
@@ -80,6 +81,41 @@ SECTION "MAIN", ROM0
 ; Lives in ROM0.
 Main::
 
+    ; Check that all ROMX banks have their bank number set
+    IF CONFIG_DEV
+        ld bc, rROMB0
+        ld hl, rRomXBank
+        
+        ; Get number of banks -> D
+        ld a, [$0148] ; ROM size
+        inc a
+        add a, a
+        ld d, a
+
+        ; Ensure calculated and specified bank number is the same
+        cp a, CONFIG_ROM_BANK_COUNT
+        jr z, :+
+            ld hl, ErrorRomXBankCount
+            rst VecError
+        :
+
+        ; Start looping
+        ld a, 1
+        .bankCheckLoop
+            ld [bc], a
+            cp a, [hl]
+            jr z, :+
+                ld hl, ErrorRomXBankMarker
+                rst VecError
+            :
+
+            inc a
+            cp a, d
+            jr nz, .bankCheckLoop
+        ;
+    ENDC
+
+
     ; Reset stack
     ld sp, wStack
     call DetectCGB
@@ -120,6 +156,19 @@ Main::
     ; Go to gameloop
     jp GameloopTest
 ;
+
+
+
+; Write bank number indicator to every ROMX bank
+FOR N, 1, CONFIG_ROM_BANK_COUNT
+    SECTION "ROM BANK NUMBER {d:N}", ROMX[$7FFF], BANK[N]
+    IF N == 1
+        ; Read-only pseudo-register, indicating which ROMX bank is currently mapped.
+        ; Exists in every ROMX bank at the same address.
+        rRomXBank::
+    ENDC
+    db N
+ENDR
 
 
 
