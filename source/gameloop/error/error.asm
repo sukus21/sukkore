@@ -693,9 +693,9 @@ ErrorMessages:
     ErrorEntityOverflow::   create_message "ENTITY OVERFLOW"
     ErrorColorRequired::    create_message "ONLY PLAYS ON CGB"
     ErrorVQueueOverflow::   create_message "VQUEUE OVERFLOW"
-    ErrorTest::             create_message "TEST"
     ErrorRomXBankMarker::   create_message "ROMX BANK W/O MARK"
     ErrorRomXBankCount::    create_message "BAD ROMX BANK COUNT"
+    ErrorSramBankCount::    create_message "BAD SRAM BANK COUNT"
     POPC
 ;
 

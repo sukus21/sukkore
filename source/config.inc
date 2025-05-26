@@ -9,6 +9,10 @@ DEF CONFIG_DEV EQU 1
 ; This has to be manually updated as the ROM size grows.
 DEF CONFIG_ROM_BANK_COUNT EQU 2
 
+; Number of total SRAM banks.
+; This has to be manually updated, as potential savegames grow in size.
+DEF CONFIG_SRAM_BANK_COUNT EQU 0
+
 ; Toggle if banking is enabled for ROMX.
 ; Can be checked at compile time to avoid some bank-switching calls.
 DEF CONFIG_BANKABLE_ROMX EQU 1

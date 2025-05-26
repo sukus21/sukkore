@@ -115,6 +115,48 @@ Main::
         ;
     ENDC
 
+    ; Write bank indicator to all SRAM banks
+    IF CONFIG_BANKABLE_SRAM
+        ld a, CART_SRAM_ENABLE
+        ld [rRAMG], a
+
+        ; Get number of SRAM banks -> D
+        ld a, [$0149]
+        sub a, 2
+        ld d, a
+        ld a, 1
+        jr z, :++
+        :   add a, a
+            add a, a
+            dec d
+            jr nz, :-
+        :
+        ld d, a
+
+        ; Ensure SRAM bank count in ROM header and config match
+        IF CONFIG_DEV
+            cp a, CONFIG_SRAM_BANK_COUNT
+            jr z, :+
+                ld hl, ErrorSramBankCount
+                rst VecError
+            :
+        ENDC
+
+        ; Write indicator to all banks
+        xor a
+        ld bc, rRAMB
+        ld hl, rSramBank
+        .sramBankLoop
+            ld [bc], a
+            ld [hl], a
+            dec d
+            jr nz, .sramBankLoop
+        ;
+
+        ; Disable SRAM again
+        ld a, CART_SRAM_DISABLE
+        ld [rRAMG], a
+    ENDC
 
     ; Reset stack
     ld sp, wStack
@@ -168,6 +210,20 @@ FOR N, 1, CONFIG_ROM_BANK_COUNT
         rRomXBank::
     ENDC
     db N
+ENDR
+
+
+
+; Allocate space for bank number indicator in every SRAM bank
+SECTION "SRAM BANK NUMBER", SRAM[$BFFF]
+    
+; Read-only pseudo-register, indicating which SRAM bank is currently mapped.
+; Exists in every SRAM bank at the same address.
+rSramBank::
+
+FOR N, CONFIG_SRAM_BANK_COUNT
+    SECTION "SRAM BANK NUMBER {d:N}", SRAM[$BFFF], BANK[N]
+    ds 1
 ENDR
 
 
