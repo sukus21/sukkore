@@ -9,16 +9,19 @@
             "type": "shell",
             "command": "python3",
             "args": [
-                "build.py"
+                "build.py",
             ],
             "presentation": {
                 "clear": true,
-                "panel": "dedicated",
+                "panel": "shared",
+                "showReuseMessage": false,
+                "reveal": "never",
+                "revealProblems": "onProblem",
             },
             "problemMatcher": [
                 "$rgbdserror",
-                "$rgbdslinkerror"
-            ]
+                "$rgbdslinkerror",
+            ],
         },
         {
             "label": "rebuild",
@@ -26,16 +29,19 @@
             "command": "python3",
             "args": [
                 "build.py",
-                "--rebuild"
+                "--rebuild",
             ],
             "presentation": {
                 "clear": true,
-                "panel": "dedicated",
+                "panel": "shared",
+                "showReuseMessage": false,
+                "reveal": "never",
+                "revealProblems": "onProblem",
             },
             "problemMatcher": [
                 "$rgbdserror",
-                "$rgbdslinkerror"
-            ]
+                "$rgbdslinkerror",
+            ],
         },
         {
             "label": "clean",
@@ -43,12 +49,15 @@
             "type": "shell",
             "command": "python3",
             "args": [
-                "clean.py"
+                "clean.py",
             ],
             "presentation": {
                 "clear": true,
-                "panel": "dedicated",
+                "panel": "shared",
+                "showReuseMessage": false,
+                "reveal": "never",
+                "revealProblems": "onProblem",
             },
-        }
-    ]
+        },
+    ],
 }
