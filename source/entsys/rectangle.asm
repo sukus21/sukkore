@@ -1,6 +1,9 @@
 INCLUDE "hardware.inc/hardware.inc"
 INCLUDE "vqueue/vqueue.inc"
+INCLUDE "config.inc"
 
+
+    IF CONFIG_DEV
 
 ; What tile to start drawing from
 DEF RECTANGLE_TILES EQU $E0
@@ -455,3 +458,5 @@ SECTION "RECTANGLE VARIABLES", WRAM0
     ; Rectangle sprite tile ID
     wSpriteRectangle:: ds 1
 ;
+
+    ENDC
