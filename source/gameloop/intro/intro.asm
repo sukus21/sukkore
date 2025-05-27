@@ -53,21 +53,6 @@ IntroTilemapCGB: INCBIN "gameloop/intro/splash_cgb.tilemap"
 IntroTileset: INCBIN "gameloop/intro/splash_cgb.2bpp"
 .end
 
-; Prepared VQueue transfers for DMG
-IntroVQueueDMG:
-    vqueue_prepare PalsetDMG, %1_00000000, %1_00000000, %1_00000000
-    vqueue_prepare_memcpy VT_INTRO_TILES, IntroTileset, 0, 0
-    vqueue_prepare MemcpyScreen, VM_INTRO_SPLASH, IntroTilemapDMG
-;
-
-; Prepared VQueue transfers for CGB
-IntroVQueueCGB:
-    vqueue_prepare_memcpy VT_INTRO_TILES, IntroTileset, 0, 0
-    vqueue_prepare MemcpyScreen, VM_INTRO_SPLASH, IntroTilemapCGB
-    vqueue_prepare_memset VM_INTRO_SPLASH, 1, $400, 1, 0
-    vqueue_prepare IntroSetFaceAttributes, VM_INTRO_FACE, 0, 0, 0, 0, 1
-;
-
 
 
 ; Sets attributes for the face.
@@ -95,6 +80,77 @@ IntroSetFaceAttributes:
 
 
 
+; VQueue transfer routine for loading the intro assets.
+;
+; Destroys: all
+IntroTransfer:
+
+    ; Reset scroll position
+    xor a
+    ldh [rSCX], a
+    ldh [rSCY], a
+
+    ; Copy tileset
+    ld hl, VT_INTRO_TILES
+    ld bc, IntroTileset
+    ld d, (IntroTileset.end - IntroTileset) >> 4
+    call MemcpyTile2BPP
+
+    ; Ok, now what?
+    ld a, [wIsCGB]
+    or a, a ; cp a, 0
+    jr nz, .isCgb
+
+    ; DMG-mode transfers
+    .isDmg
+
+        ; Copy tilemap
+        ld hl, VM_INTRO_SPLASH
+        ld bc, IntroTilemapDMG
+        call MemcpyScreen
+
+        ; Set palettes
+        xor a
+        call PaletteSetBGP
+        call PaletteSetOBP0
+        call PaletteSetOBP1
+
+        ; Ok, I think we are done here
+        jr .return
+    ;
+
+    ; CGB-mode transfers
+    .isCgb
+
+        ; Copy tilemap
+        xor a
+        ldh [rVBK], a
+        ld hl, VM_INTRO_SPLASH
+        ld bc, IntroTilemapCGB
+        call MemcpyScreen
+
+        ; Set tilemap attributes
+        ld a, 1
+        ldh [rVBK], a
+        ld hl, VM_INTRO_SPLASH
+        ld bc, $01_40
+        call MemsetChunked
+        call IntroSetFaceAttributes
+
+        ; Yup, we are done here
+        ; falls into `.return`
+    ;
+
+    .return
+
+    ; Enable LCD features
+    ld a, LCDCF_ON | LCDCF_BGON
+    ldh [rLCDC], a
+    ret
+;
+
+
+
 ; Plays the "Sukus Production" splash screen.
 ; Routine will keep running until the animation is over, then return.  
 ; Modifies screen data.  
@@ -103,36 +159,9 @@ IntroSetFaceAttributes:
 ; Destroys: all
 Intro::
 
-    ; Reset scroll position
-    xor a
-    ldh [rSCX], a
-    ldh [rSCY], a
-
     ; Reset variables
     xor a
     ld [wIntroTimer], a
-
-    ; Set up VQueue transfers
-    ld a, [wIsCGB]
-    or a, a ; cp a, 0
-    jr z, .isDMG
-        ld de, IntroVQueueCGB
-        ld b, 4
-        call VQueueEnqueueMulti
-        jr .queued
-    .isDMG
-        ld de, IntroVQueueDMG
-        ld b, 3
-        call VQueueEnqueueMulti
-    .queued
-
-    ; Wait for transfers to complete
-    call GameloopLoading
-        
-    ; Wait for VBlank to enable LCD features
-    call WaitVBlank
-    ld a, LCDCF_ON | LCDCF_BGON
-    ldh [rLCDC], a
 
     ; Set target DMG palettes
     ld a, %11100100
@@ -140,19 +169,20 @@ Intro::
     ld a, %10010000
     ld [wIntroPaletteDMG1], a
 
+    ; Set up VQueue transfers
+    vqueue_enqueue IntroTransfer
+    call GameloopLoading
+
     ; Do all the things
     call IntroFadeIn
     call IntroWait
     call IntroFadeOut
 
     ; Before we leave, let's clear the tilemap attributes
-    ld de, ColorVQueueResetAttributes
-    ld b, 1
-    call VQueueEnqueueMulti
-    call GameloopLoading
-
-    ; Ok, we are done
-    ret
+    ld a, [wIsCGB]
+    or a, a ; cp a, 0
+    vqueue_enqueue z, ColorResetAttributes0
+    jp GameloopLoading ; tail call
 ;
 
 

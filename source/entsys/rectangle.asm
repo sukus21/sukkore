@@ -1,10 +1,13 @@
 INCLUDE "hardware.inc/hardware.inc"
 INCLUDE "vqueue/vqueue.inc"
 
+
 ; What tile to start drawing from
 DEF RECTANGLE_TILES EQU $E0
 DEF RECTANGLE_TILE_TOP EQU RECTANGLE_TILES
 DEF RECTANGLE_TILE_BOTTOM EQU RECTANGLE_TILES+2
+
+
 
 SECTION "RECTANGLE DRAWER", ROMX
 
@@ -54,7 +57,10 @@ RectanglePointsLoad::
     ld d, a
 
     ; Add VQueue transfer
-    vqueue_add_memcpy de, RectanglePointsTileset, 0
+    vqueue_enqueue MemcpyTile2BPP
+    write_n16 RectanglePointsTileset
+    write_n16 $01_00
+    write_n16 de
     ret
 ;
 

@@ -468,8 +468,27 @@ PaletteMakeLighter::
 
 
 
-; Prepared VQueue transfer which resets all tilemap attributes.
-ColorVQueueResetAttributes:: vqueue_prepare_memset _SCRN0, 0, $800, 1, 0
+SECTION "COLOR VQUEUE ROUTINES", ROMX
+
+; VQueue routine which resets all tilemap attributes on SCRN0.
+;
+; Saves: none
+ColorResetAttributes0::
+    ld hl, _SCRN0
+    ld bc, $00_40
+    jp MemsetChunked ; tail call
+;
+
+
+
+; VQueue routine which resets all tilemap attributes on SCRN1.
+;
+; Saves: none
+ColorResetAttributes1::
+    ld hl, _SCRN1
+    ld bc, $00_40
+    jp MemsetChunked ; tail call
+;
 
 
 

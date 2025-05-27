@@ -1,6 +1,7 @@
 INCLUDE "hardware.inc/hardware.inc"
 INCLUDE "macro/memcpy.inc"
 INCLUDE "macro/numtohex.inc"
+INCLUDE "macro/relpointer.inc"
 INCLUDE "vqueue/vqueue.inc"
 INCLUDE "gameloop/entsys_demo/vram.inc"
 
@@ -19,13 +20,50 @@ TestloopStr:
     .f16 db " 16:$    "
 ;
 
-TestloopTransfers:
-    vqueue_prepare_memset VM_ENTALLOC_CHUNKS, 0, 32*32, 0, 0
-    vqueue_prepare_1bpp VT_ENTALLOC_FONT, TestloopFont, 0, 0
-    vqueue_prepare_memcpy VT_ENTALLOC_CHUNKS, TestloopSlots, 0, 0
-    vqueue_prepare_memcpy VT_ENTALLOC_CURSOR, TestloopCursor, 0, 0
-    vqueue_prepare PalsetDMG, %1_11100100, %1_11011100
+; Transfer routine, responsible for loading the required assets.
 ;
+; Saves: none
+TestloopTransfer:
+    
+    ; Clear tilemap
+    ld hl, _SCRN0
+    ld bc, $00_40
+    call MemsetChunked
+
+    ; Copy font tiles
+    ld bc, TestloopFont
+    ld d, (TestloopFont.end - TestloopFont) >> 3
+    ld hl, VT_ENTALLOC_FONT
+    call MemcpyTile1BPP
+    
+    ; Copy chunk tiles
+    ld bc, TestloopSlots
+    ld d, (TestloopSlots.end - TestloopSlots) >> 4
+    ld hl, VT_ENTALLOC_CHUNKS
+    call MemcpyTile2BPP
+
+    ; Copy cursor tiles
+    ld bc, TestloopCursor
+    ld d, (TestloopCursor.end - TestloopCursor) >> 4
+    ld hl, VT_ENTALLOC_CURSOR
+    call MemcpyTile2BPP
+
+    ; Set background position
+    ld a, -16
+    ldh [rSCX], a
+    ldh [rSCY], a
+
+    ; Set DMG palettes
+    ld a, %11100100
+    call PaletteSetBGP
+    ld a, %11011100
+    call PaletteSetOBP0
+
+    ; Ok, I think we are done here!
+    ret
+;
+
+
 
 SECTION "GAMELOOP TEST", ROM0
 
@@ -34,19 +72,10 @@ SECTION "GAMELOOP TEST", ROM0
 ; or after resetting the stack.
 ; Lives in ROM0.
 GameloopTest::
-    ld de, TestloopTransfers
-    IF CONFIG_BANKABLE_ROMX
-        ld a, bank(TestloopTransfers)
-        ld [rROMB0], a
-    ENDC
-    ld b, 5
-    call VQueueEnqueueMulti
-    call GameloopLoading
 
-    ; Set screen position
-    ld a, -16
-    ldh [rSCX], a
-    ldh [rSCY], a
+    ; Load assets
+    vqueue_enqueue TestloopTransfer
+    call GameloopLoading
 
     ; Initialize a few variables
     xor a

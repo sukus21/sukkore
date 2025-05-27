@@ -3,6 +3,9 @@ INCLUDE "vqueue/vqueue.inc"
 INCLUDE "config.inc"
 INCLUDE "macro/lyc.inc"
 INCLUDE "macro/memcpy.inc"
+INCLUDE "macro/relpointer.inc"
+INCLUDE "utils.inc"
+
 
 SECTION "VQUEUE", ROM0
 
@@ -37,20 +40,21 @@ VQueueInit::
 
 
 
-; Get a VQueue slot pointer.  
+; Get a VQueue slot pointer.
+; The given pointer is not initialized at all, that must be done manually,
+; to prevent reading uninitialized memory.  
 ; Lives in ROM0.
 ;
 ; Returns:
 ; - `hl`: `VQUEUE_T` pointer
 ;
-; Saves: `bc`, `de`
-VQueueGet::
-    push bc
+; Saves: `b`, `de`
+VQueueGetRaw::
 
-    ; Read into B and increment
+    ; Read VQueue entry into C and increment
     ld hl, wVQueueFree
     ld a, [hl]
-    ld b, a
+    ld c, a
     add a, VQUEUE_T
     ld [hl+], a
 
@@ -61,37 +65,68 @@ VQueueGet::
         rst VecError
     :
 
-    ; Yes, good, return
-    ld l, b
+    ; VQueue pointer -> HL
+    ld l, c
     ld h, high(wVQueue)
-    pop bc
     ret
 ;
 
 
 
-; Enqueues multiple prepared vqueue transfers,
-; stored one after the other in memory.  
-; Assumes correct ROM-bank is switched in.  
+; Get a VQueue slot pointer.
+; The slot pointer will have its data initialized,
+; to prevent uninitialized memory access.  
 ; Lives in ROM0.
 ;
 ; Input:
-; - `de`: Prepared transfers
-; - `b`: Number of transfers
+; - `de`: Routine address
+; - `b`: Routine bank
 ;
-; Destroys: all
-VQueueEnqueueMulti::
-    ld a, b
-    or a, a
-    ret z
+; Returns:
+; - `hl`: `VQUEUE_T` pointer, at `VQUEUE_REGISTER_BC`
+;
+; Saves: `de`
+VQueueGet::
+    call VQueueGetRaw
+    ld c, l
+    relpointer_init l
 
-    ; Start loopin' away
-    .loop
-    call VQueueGet
-    ld c, VQUEUE_T
-    memcpy_custom hl, de, c
-    dec b
-    jr nz, .loop
+    ; Write specified ROMX bank
+    IF CONFIG_BANKABLE_ROMX
+        relpointer_move VQUEUE_BANK_ROMX
+        ld a, b
+        ld [hl+], a
+        relpointer_add 1
+    ENDC
+
+    ; Zero out the rest of the banks
+    relpointer_move VQUEUE_BANK_SRAM
+    xor a
+    ld [hl+], a
+    ld [hl+], a
+    ld [hl+], a
+    relpointer_add 3
+
+    ; Write specified program counter
+    relpointer_assert VQUEUE_REGISTER_PC
+    write_n16 de
+    relpointer_add 2
+
+    ; Write default stack pointer
+    relpointer_assert VQUEUE_REGISTER_SP
+    write_n16 wVQueueStack
+
+    ; Ok, now zero out the rest of the registers
+    xor a
+    ld c, l
+    REPT VQUEUE_T - __RELPOINTER_POSITION
+        ld [hl+], a
+    ENDR
+
+    ; Squeaky clean, return
+    relpointer_destroy
+    ld h, high(wVQueue)
+    ld l, c
     ret
 ;
 
@@ -162,37 +197,53 @@ LOAD "VQUEUE RAMCODE", WRAM0
 
     ; Input:
     ; - `hl`: VQueue job pointer
+    ;
+    ; Returns:
+    ; - `l`: `wVQueueCurrent`
     VQueueRun::
+        relpointer_init l
 
-        ; Switch source bank
-        ld a, [hl+]
+        ; Switch all the banks!
         IF CONFIG_BANKABLE_ROMX
+            relpointer_move VQUEUE_BANK_ROMX
+            ld a, [hl+]
             ld [rROMB0], a
+            relpointer_add 1
         ENDC
         IF CONFIG_BANKABLE_SRAM
+            relpointer_move VQUEUE_BANK_SRAM
+            ld a, [hl+]
             ld [rRAMB], a
+            relpointer_add 1
         ENDC
         IF CONFIG_BANKABLE_WRAMX
+            relpointer_move VQUEUE_BANK_ROMX
+            ld a, [hl+]
             ldh [rSVBK], a
+            relpointer_add 1
         ENDC
-
-        ; Switch destination bank
-        ld a, [hl+]
         IF CONFIG_BANKABLE_VRAM
+            relpointer_move VQUEUE_BANK_ROMX
+            ld a, [hl+]
             ldh [rVBK], a
+            relpointer_add 1
         ENDC
 
         ; Prepare program counter
+        relpointer_move VQUEUE_REGISTER_PC
         ld a, [hl+]
         ld [.setPC + 1], a
         ld a, [hl+]
         ld [.setPC + 2], a
+        relpointer_add 2
 
         ; Prepare stack pointer
+        relpointer_assert VQUEUE_REGISTER_SP
         ld a, [hl+]
         ld [.setSP + 1], a
         ld a, [hl+]
         ld [.setSP + 2], a
+        relpointer_destroy
 
         ; Prepare all other registers
         ld [.restoreSP + 1], sp
@@ -201,7 +252,6 @@ LOAD "VQUEUE RAMCODE", WRAM0
         pop de
         pop hl
         pop af
-        ld [.restoreHL + 1], sp
 
         ; Prepare for the jump
         .setSP ld sp, $0000
@@ -211,24 +261,7 @@ LOAD "VQUEUE RAMCODE", WRAM0
         ; If you're here, that means the job has completed!
         .returnAddress::
         di
-        .restoreHL ld hl, $0000
         .restoreSP ld sp, $0000
-
-        ; Read writeback pointer
-        ld a, [hl+]
-        ld b, [hl]
-        inc l ; explicitly ignore carry to loop queue around
-
-        ; Do we perform writeback?
-        or a, a
-        jr z, :+
-
-            ; Perform writeback
-            ld c, a
-            ld a, [bc]
-            dec a
-            ld [bc], a
-        :
 
         ; Increment `wVQueueCurrent`
         ld bc, wVQueueCurrent
@@ -237,6 +270,8 @@ LOAD "VQUEUE RAMCODE", WRAM0
         ld [bc], a
 
         ; Return
+        ld h, high(wVQueue)
+        ld l, a
         ret
     ;
 
@@ -246,18 +281,19 @@ LOAD "VQUEUE RAMCODE", WRAM0
     ; - `all`: any
     VQueueInterrupt::
         ; Store registers temporarily, without altering the flags
-        ld [.setA + 1], a
         ld [.setSP + 1], sp
+        push af
 
         ; Read job pointer -> sp
-        ld a, [VQueueRun.restoreHL + 1]
+        ld a, [wVQueueCurrent]
+        add a, VQUEUE_T
         ld [.restoreSP + 1], a
-        ld a, [VQueueRun.restoreHL + 2]
+        ld a, high(wVQueue)
         ld [.restoreSP + 2], a
+        pop af
         .restoreSP ld sp, $0000
 
         ; Save general purpose register pairs
-        .setA ld a, $00
         push af
         push hl
         push de
@@ -271,6 +307,35 @@ LOAD "VQUEUE RAMCODE", WRAM0
         ld b, a
         push hl
         push bc
+
+        ; Save mapped banks
+        relpointer_init l
+        ld hl, sp - 4
+        IF CONFIG_BANKABLE_ROMX
+            relpointer_move VQUEUE_BANK_ROMX
+            ld a, [rRomXBank]
+            ld [hl+], a
+            relpointer_add 1
+        ENDC
+        IF CONFIG_BANKABLE_SRAM
+            relpointer_move VQUEUE_BANK_SRAM
+            ld a, [rSramBank]
+            ld [hl+], a
+            relpointer_add 1
+        ENDC
+        IF CONFIG_BANKABLE_WRAMX
+            relpointer_move VQUEUE_BANK_WRAMX
+            ldh a, [rSVBK]
+            ld [hl+], a
+            relpointer_add 1
+        ENDC
+        IF CONFIG_BANKABLE_VRAM
+            relpointer_move VQUEUE_BANK_VRAM
+            ldh a, [rVBK]
+            ld [hl+], a
+            relpointer_add 1
+        ENDC
+        relpointer_destroy
 
         ; Restore REAL program counter
         ld hl, wVQueueSP
