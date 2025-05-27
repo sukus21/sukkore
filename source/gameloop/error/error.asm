@@ -418,8 +418,7 @@ ErrorStatInterrupt:
     xor a
     ldh [rSCX], a
 
-    ; This is the final scanline, just wait for VBlank
-    call WaitVBlank
+    ; This is the final scanline, just begin VBlank
 
 
 
