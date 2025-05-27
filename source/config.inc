@@ -15,11 +15,11 @@ DEF CONFIG_SRAM_BANK_COUNT EQU 0
 
 ; Toggle if banking is enabled for ROMX.
 ; Can be checked at compile time to avoid some bank-switching calls.
-DEF CONFIG_BANKABLE_ROMX EQU 1
+DEF CONFIG_BANKABLE_ROMX EQU (CONFIG_ROM_BANK_COUNT > 2)
 
 ; Toggle if banking is enabled for SRAM.
 ; Can be checked at compile time to avoid some bank-switching calls.
-DEF CONFIG_BANKABLE_SRAM EQU 1
+DEF CONFIG_BANKABLE_SRAM EQU (CONFIG_SRAM_BANK_COUNT > 1)
 
 ; Toggle if the game makes use the extra bankable CGB WRAMX.
 ; Can be checked at compile time to avoid some bank-switching calls.
