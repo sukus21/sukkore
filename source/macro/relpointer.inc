@@ -54,6 +54,17 @@ ENDM
 
 
 
+; Ensure that relative pointer is at X position.
+; Useful to maintain relpointer state, when tight on CPU cycles.
+;
+; Input:
+; - `1`: Offset to check
+MACRO relpointer_assert
+    STATIC_ASSERT __RELPOINTER_POSITION == \1, "relpointer: assert failed, relpointer not at \1"
+ENDM
+
+
+
 ; Move the relative pointer.
 ; Also saves the state of the relative pointer.
 ; The state can be restored with `relpointer_pop`.
@@ -119,6 +130,18 @@ ENDM
 ; - `1`: Where to move the relative pointer
 MACRO relpointer_set
     DEF __RELPOINTER_POSITION = \1
+ENDM
+
+
+
+; Add an offset to the internal pointer state.
+; Does not move the actual pointer.
+; Just updates the internal relpointer logic.
+;
+; Input:
+; - `1`: Offset to add
+MACRO relpointer_add
+    DEF __RELPOINTER_POSITION += \1
 ENDM
 
 
