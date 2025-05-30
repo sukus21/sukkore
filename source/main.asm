@@ -187,6 +187,8 @@ Main::
     call ColorInit
     ld hl, wOAM
     call SpriteInit
+    xor a
+    ld [wInput], a
 
     ; Do my intro with the logo
     farcall Intro

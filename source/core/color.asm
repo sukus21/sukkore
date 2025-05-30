@@ -30,7 +30,9 @@ ColorInit::
 
 
 
-; Detect if current hardware is CGB compatible or not.  
+; Detect if current hardware is CGB compatible or not.
+; This function will destroy 1 or 2 bytes of random WRAMX.
+; Call this BEFORE initializing any memory.  
 ; Lives in ROM0.
 ; 
 ; Returns:
@@ -38,7 +40,7 @@ ColorInit::
 ; - `fZ`: result (0 = CGB compatible)
 ; - `fC`: result (1 = CGB compatible)
 ;
-; Saves: none
+; Saves: `de`
 DetectCGB::
     ld hl, _RAMBANK
     ld c, low(rSVBK)
@@ -50,13 +52,11 @@ DetectCGB::
     ; Overwrite byte 1
     ld a, 1
     ldh [c], a
-    ld d, [hl]
     ld [hl], a
 
     ; Overwrite byte 2
     inc a
     ldh [c], a
-    ld e, [hl]
     ld [hl], a
 
     ; Compare
@@ -66,11 +66,9 @@ DetectCGB::
     sub a, 2
 
     ; Restore without altering flags
-    ld [hl], d
     ld d, a
     ld a, 1
     ldh [c], a
-    ld [hl], e
     ld a, b
     ldh [c], a
 

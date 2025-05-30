@@ -353,6 +353,8 @@ GameloopError:
 
     ; Prepare
     ld hl, Zero+144
+    ld d, h
+    ld e, l
 
     ; Enable interupts
     ld a, STATF_MODE00
