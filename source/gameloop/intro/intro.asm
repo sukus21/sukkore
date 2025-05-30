@@ -7,6 +7,11 @@ INCLUDE "gameloop/intro/vram.inc"
 DEF INTRO_FADE_FRAMES EQU 31
 DEF INTRO_WAIT_FRAMES EQU 44
 
+RSRESET
+DEF INTRO_STATE_IN RB 1
+DEF INTRO_STATE_WAIT RB 1
+DEF INTRO_STATE_OUT RB 1
+
 
 SECTION "INTRO", ROMX, ALIGN[8]
 
@@ -60,8 +65,12 @@ IntroTileset: INCBIN "gameloop/intro/splash_cgb.2bpp"
 ; Input:
 ; - `hl`: face address
 IntroSetFaceAttributes:
+    ld a, 1
+    ldh [rVBK], a
+
+    ld hl, VM_INTRO_FACE
+    xor a
     ld c, 8
-    ld a, 0
     ld de, 24
     .loop
         ; Set data
@@ -75,6 +84,8 @@ IntroSetFaceAttributes:
         jr nz, .loop
     ;
 
+    xor a
+    ldh [rVBK], a
     ret
 ;
 
@@ -123,8 +134,6 @@ IntroTransfer:
     .isCgb
 
         ; Copy tilemap
-        xor a
-        ldh [rVBK], a
         ld hl, VM_INTRO_SPLASH
         ld bc, IntroTilemapCGB
         call MemcpyScreen
@@ -162,6 +171,8 @@ Intro::
     ; Reset variables
     xor a
     ld [wIntroTimer], a
+    ld a, INTRO_STATE_IN
+    ld [wIntroState], a
 
     ; Set target DMG palettes
     ld a, %11100100
@@ -174,110 +185,91 @@ Intro::
     call GameloopLoading
 
     ; Do all the things
-    call IntroFadeIn
-    call IntroWait
-    call IntroFadeOut
+    .loop
+
+        ; Wait for VBlank
+        call WaitVBlank
+
+        ; Figure out what state to use
+        ld hl, wIntroTimer
+        ld a, [wIntroState]
+
+        ; Fading in?
+        cp a, INTRO_STATE_IN
+        jr nz, .notIn
+            inc [hl]
+            ld a, [hl]
+            add a, a
+            ld bc, %00111111
+            and a, c
+            ld c, a
+            call IntroFading
+
+            ; Are we done fading in?
+            ld a, [wIntroTimer]
+            cp a, INTRO_FADE_FRAMES
+            jr nz, .loop
+
+            ; Yep
+            ld a, INTRO_STATE_WAIT
+            ld [wIntroState], a
+            xor a
+            ld [wIntroTimer], a
+            jr .loop
+        .notIn
+
+        ; Wait?
+        cp a, INTRO_STATE_WAIT
+        jr nz, .notWait
+            inc [hl]
+            ld a, [hl]
+            cp a, INTRO_WAIT_FRAMES
+            jr nz, .loop
+
+            ; Done waiting
+            ld a, INTRO_STATE_OUT
+            ld [wIntroState], a
+            xor a
+            ld [wIntroTimer], a
+            jr .loop
+        .notWait
+
+        ; Fading out?
+        cp a, INTRO_STATE_OUT
+        jr nz, .notOut
+            inc [hl]
+            ld a, INTRO_FADE_FRAMES
+            sub a, [hl]
+            add a, a
+            ld bc, %00111111
+            and a, c
+            ld c, a
+            call IntroFading
+
+            ; Are we done fading in?
+            ld a, [wIntroTimer]
+            cp a, INTRO_FADE_FRAMES
+            jr nz, .loop
+        .notOut
+    ;
 
     ; Before we leave, let's clear the tilemap attributes
-    ld a, [wIsCGB]
-    or a, a ; cp a, 0
-    vqueue_enqueue z, ColorResetAttributes0
+    .return
+    vqueue_enqueue IntroSkipTransfer
     jp GameloopLoading ; tail call
 ;
 
 
 
-; Fades the screen from white.
-; Assumes LCD is on.
-; Modifies palette data.
-;
-; Destroys: all
-IntroFadeIn:
-    ; Initialize color and variables
+; Skips whatever is left of the intro routine.
+IntroSkipTransfer:
     xor a
-    ld [wIntroTimer], a
+    call PaletteSetBGP
 
-    ; Fade in
-    .loop
-        call WaitVBlank
-
-        ; Do the fading
-        ld hl, wIntroTimer
-        inc [hl]
-        ld a, [hl]
-        add a, a
-        ld bc, %00111111
-        and a, c
-        ld c, a
-        call IntroFading
-
-        ; Are we done fading in?
-        ld a, [wIntroTimer]
-        cp a, INTRO_FADE_FRAMES
-        jr nz, .loop
-    ;
-
-    ; Return
-    ret
-;
-
-
-
-; Fades the screen from white.
-; Assumes LCD is on.
-; Modifies palette data.
-;
-; Destroys: all
-IntroFadeOut:
-    ; Initialize color and variables
-    xor a
-    ld [wIntroTimer], a
-
-    ; Fade in
-    .loop
-        call WaitVBlank
-
-        ; Do the fading
-        ld hl, wIntroTimer
-        inc [hl]
-        ld a, INTRO_FADE_FRAMES
-        sub a, [hl]
-        add a, a
-        ld bc, %00111111
-        and a, c
-        ld c, a
-        call IntroFading
-
-        ; Are we done fading in?
-        ld a, [wIntroTimer]
-        cp a, INTRO_FADE_FRAMES
-        jr nz, .loop
-    ;
-
-    ; Return
-    ret
-;
-
-
-
-; Waits for a while.  
-; Assumes the LCD is on.
-IntroWait:
-    xor a
-    ld [wIntroTimer], a
-    
-    .loop
-        call WaitVBlank
-
-        ld hl, wIntroTimer
-        inc [hl]
-        ld a, [hl]
-        cp a, INTRO_WAIT_FRAMES
-        jr nz, .loop
-    ;
-
-    ; Return
-    ret
+    ld a, [wIsCGB]
+    or a, a ; cp a, 0
+    ret z
+    jp ColorResetAttributes0 ; tail call
 ;
 
 
@@ -456,5 +448,8 @@ SECTION UNION "GAMELOOP UNION", WRAM0, ALIGN[8]
     ENDU
 
     ; Intro timer.
-    wIntroTimer: ds 0
+    wIntroTimer: ds 1
+
+    ; Intro state.
+    wIntroState: ds 1
 ;
