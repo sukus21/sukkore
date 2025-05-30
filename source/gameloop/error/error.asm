@@ -336,9 +336,9 @@ GameloopError:
 
     ; Set DMG palettes
     ld a, %00011011
-    ldh [rBGP], a
+    call PaletteSetBGP
     ld a, %00011100
-    ldh [rOBP0], a
+    call PaletteSetOBP0
 
     ; Set sprite data
     ; Saves me time, because I don't want to do it manually
@@ -418,8 +418,13 @@ ErrorStatInterrupt:
     xor a
     ldh [rSCX], a
 
-    ; This is the final scanline, just begin VBlank
-
+    ; This is the final scanline, wait for VBlank
+    .waitForVBlank
+        ldh a, [rSTAT]
+        and a, STATF_LCD
+        dec a
+        jr nz, .waitForVBlank
+    ;
 
 
     ; VBLANK
