@@ -474,9 +474,16 @@ SECTION "COLOR VQUEUE ROUTINES", ROMX
 ;
 ; Saves: none
 ColorResetAttributes0::
+    ld a, 1
+    ldh [rVBK], a
+
     ld hl, _SCRN0
     ld bc, $00_40
-    jp MemsetChunked ; tail call
+    call MemsetChunked
+
+    xor a
+    ldh [rVBK], a
+    ret
 ;
 
 
@@ -485,9 +492,16 @@ ColorResetAttributes0::
 ;
 ; Saves: none
 ColorResetAttributes1::
+    ld a, 1
+    ldh [rVBK], a
+
     ld hl, _SCRN1
     ld bc, $00_40
-    jp MemsetChunked ; tail call
+    call MemsetChunked
+
+    xor a
+    ldh [rVBK], a
+    ret
 ;
 
 
