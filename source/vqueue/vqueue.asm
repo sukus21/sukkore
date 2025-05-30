@@ -217,13 +217,13 @@ LOAD "VQUEUE RAMCODE", WRAM0
             relpointer_add 1
         ENDC
         IF CONFIG_BANKABLE_WRAMX
-            relpointer_move VQUEUE_BANK_ROMX
+            relpointer_move VQUEUE_BANK_WRAMX
             ld a, [hl+]
             ldh [rSVBK], a
             relpointer_add 1
         ENDC
         IF CONFIG_BANKABLE_VRAM
-            relpointer_move VQUEUE_BANK_ROMX
+            relpointer_move VQUEUE_BANK_VRAM
             ld a, [hl+]
             ldh [rVBK], a
             relpointer_add 1
