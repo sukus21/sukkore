@@ -87,7 +87,7 @@ DetectCGB::
 ; Lives in ROM0.
 ;
 ; Input:
-; - `b.7`: Desired speed
+; - `b.0`: Desired speed
 ;
 ; Destroys: `a`, `hl`
 ; Saves: `e`
