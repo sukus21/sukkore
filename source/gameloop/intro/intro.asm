@@ -186,6 +186,10 @@ Intro::
 
     ; Do all the things
     .loop
+        ; Skip intro?
+        call ReadInput
+        bit PADB_A, c
+        jr nz, .return
 
         ; Wait for VBlank
         call WaitVBlank
