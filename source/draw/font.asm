@@ -1,4 +1,4 @@
-
+INCLUDE "utils.inc"
 
 SECTION "FONT RENDERER", ROM0
 
@@ -13,10 +13,9 @@ SECTION "FONT RENDERER", ROM0
 ; - `c`: Destination pixel offset (0-7)
 ; - `de`: Destination tile pointer
 ;
-; Saves: `af`, `bc`, `hl`
+; Saves: `af`, `hl`
 FontDrawGlyph::
     push hl
-    push bc
     push af
 
     ; Get glyph size -> D
@@ -30,16 +29,7 @@ FontDrawGlyph::
     add a, [hl]
     cp a, 9
     jp c, FontDrawGlyphFast
-
-    ; Not implemented yet
-    ld b, b
-    rst VecError
-
-    ; Mission accomplished!
-    pop af
-    pop bc
-    pop hl
-    ret
+    jp FontDrawGlyphSlow
 ;
 
 
@@ -57,7 +47,7 @@ FontDrawGlyph::
 ; - `c`: New destination pixel offset (0-7)
 ; - `de`: New destination tile pointer
 ;
-; Saves: `af`, `bc`, `hl`
+; Saves: `af`, `hl`
 FontDrawGlyphFast:
 
     ; Read glyph width -> stack
@@ -134,15 +124,146 @@ FontDrawGlyphFast:
 
     ; Write all of this to memory as well
     ld hl, wFontDestChar
-    ld a, e
-    ld [hl+], a
-    ld a, d
-    ld [hl+], a
+    write_n16 de
     ld [hl], c
 
     ; Yea, we done
     pop af
+    pop hl
+    ret
+;
+
+
+
+; Optimized path, when we only need to write to one destination tile.  
+; Lives in ROM0.
+;
+; Input:
+; - `c`: `wFontDestPixel`
+; - `h`: `wFontPointer`
+; - `l`: Glyph ID
+; - `hl`: Pointer to glyph width
+;
+; Returns:
+; - `c`: New destination pixel offset (0-7)
+; - `de`: New destination tile pointer
+;
+; Saves: `af`, `hl`
+FontDrawGlyphSlow:
+    
+    ; Build pointer to glyph data -> DE
+    xor a
+    ld e, l
+    sla e
+    rla
+    sla e
+    rla
+    sla e
+    rla
+    add a, h
+    ld d, a
+    inc d
+    push de
+
+    ; Read glyph width -> stack
+    ld a, [hl]
+    push af
+
+    ; Read destination poiner -> HL
+    ld hl, wFontDestChar
+    ld a, [hl+]
+    ld h, [hl]
+    ld l, a
+
+    ; Begin pasting glyph at destination
+    ld b, 8
+    .loopLeft
+        ; Read pixels
+        push bc
+        ld a, [de]
+        inc de
+
+        ; Shift pixel data over -> A
+        inc c
+        .shiftLoopLeft
+            dec c
+            jr z, .shiftedLeft
+            srl a
+            jr .shiftLoopLeft
+        .shiftedLeft
+
+        ; Or pixel data with existing data
+        ld b, a
+        or a, [hl]
+        ld [hl+], a
+        ld a, b
+        or a, [hl]
+        ld [hl+], a
+
+        ; Repeat the loop?
+        pop bc
+        dec b
+        jr nz, .loopLeft
+    ;
+
+    ; Get new pixel destination -> C
+    pop de
+    ld a, d
+    add a, c
+    and a, %00000111
+    ld c, a
+
+    ; Get number of pixels drawn -> B
+    ld a, d
+    sub a, c
+    ld b, a
+    
+    ; Write destination to memory
+    ld d, h
+    ld e, l
+    ld hl, wFontDestChar
+    write_n16 de
+    ld [hl], c
+    ld h, d
+    ld l, e
+
+    ; Restore glyph data pointer
+    pop de
+    push hl
+    push bc
+    ld c, b
+
+    ; Begin pasting glyph at destination
+    ld b, 8
+    .loopRight
+        ; Read pixels
+        push bc
+        ld a, [de]
+        inc de
+
+        ; Shift pixel data over -> A
+        inc c
+        .shiftLoopRight
+            dec c
+            jr z, .shiftedRight
+            sla a
+            jr .shiftLoopRight
+        .shiftedRight
+
+        ; This is at offset 0, just overwrite destination
+        ld [hl+], a
+        ld [hl+], a
+
+        ; Repeat the loop?
+        pop bc
+        dec b
+        jr nz, .loopRight
+    ;
+
+    ; Yea, we done
     pop bc
+    pop de
+    pop af
     pop hl
     ret
 ;
