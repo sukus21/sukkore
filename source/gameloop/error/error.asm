@@ -195,6 +195,10 @@ GameloopError:
         ldh [rLCDC], a
     :
 
+    ; Turn off audio
+    xor a
+    ldh [rNR52], a
+
     ; Reset background scrolling
     ld a, -16
     ldh [rSCX], a
