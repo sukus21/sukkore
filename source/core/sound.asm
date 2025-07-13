@@ -12,21 +12,6 @@
 ;   steps are evaluated sequentially, any delay below 256 is still valid.
 ;   
 
-; FURTHER IDEAS:
-; - Change delays to be their own operation.
-;   Reserve half of opcodes to delays to minimize cost.
-;   This could reduce the total size of the yeller code by eliminating zero-delays.
-; - Pack certain parameters of channel-triggering operations.
-;   Some parameters are either unused or constant, and do not need to be stored in the yeller code.
-;   Many of these parameters occupy different sets of bits, so bitshifts will not be needed.
-;   This could save one or two bytes on certain common operations.
-; - Add operation variants with more parameters.
-;   Some parameters, such as channel 1 sweep, are often unused in practice, but may still be
-;   valuable for certain effects.
-; - Switch to jump table.
-;   This should allow for a larger set of operations without too much overhead, allowing for
-;   more specific operations that occupy less space in ROM.
-
 INCLUDE "hardware.inc/hardware.inc"
 
 INCLUDE "core/sound.inc"
@@ -93,7 +78,265 @@ PlaySound::
 ; 
 ; Resides in a switchable bank, since it is largely self-contained and is only needed during
 ; sound evaluation.
-SECTION "SOUND EVALUATION", ROMX ALIGN(256)
+SECTION "SOUND EVALUATION", ROMX, ALIGN[8]
+
+YellerOpJumpTable:
+    dw YellerOpInvalid
+    dw YellerOpTerminate
+    dw YellerOpJump
+    
+    REPT 1
+        dw YellerOpInvalid
+    ENDR
+
+    dw YellerOpPlaySquare1
+    dw YellerOpPlaySquare2
+    dw YellerOpPlayWave
+    dw YellerOpPlayNoise
+
+    REPT ($100 - (@ - YellerOpJumpTable)) / 2
+        dw YellerOpInvalid
+    ENDR
+
+YellerOpInvalid:
+    ld hl, ErrorInvalidYellerOpcode
+    rst VecError
+
+YellerOpTerminate:
+    ; Stop all audio channels used by this yeller
+    bit YELLER_FLAGB_USES_CH1, d
+    jr z, :+
+        ld a, 0
+        ldh [rNR12], a
+    :
+    bit YELLER_FLAGB_USES_CH2, d
+    jr z, :+
+        ld a, 0
+        ldh [rNR22], a
+    :
+    bit YELLER_FLAGB_USES_CH3, d
+    jr z, :+
+        ld a, 0
+        ldh [rNR30], a
+    :
+    bit YELLER_FLAGB_USES_CH4, d
+    jr z, :+
+        ld a, 0
+        ldh [rNR42], a
+    :
+
+    ; Since we know this is the final step in the sequence, we can terminate the loop early.
+    ; Terminator steps also aren't followed by a delay value.
+
+    ; Recover yeller iterator pointer from stack
+    pop hl
+
+    ; Clear all flags
+    dec l
+    xor a
+    ld [hl+], a
+
+    ; Jump straight to the check of the yeller loop, skipping right past the usual yeller state update.
+    jp UpdateAudio.YellerLoopCondEarly
+
+YellerOpJump:
+    ; Skip if YELLER_FLAGF_BREAK_LOOP is set
+    bit YELLER_FLAGB_BREAK_LOOP, c
+    jr z, :+
+        ; Skip step params
+        ld hl, 3
+        add hl, bc
+
+        ; Continue step loop
+        jp UpdateAudio.YellerStepLoop
+    :
+
+    ; Move bc to hl
+    ld h, b
+    ld l, c
+
+    ; Get destination offset
+    ld a, [hl+]
+    ld c, a
+    ld a, [hl+]
+    ld b, a
+
+    ; Get delay
+    ld a, [hl+]
+
+    ; Apply destination address
+    add hl, bc
+
+    ; Continue step loop
+    jp UpdateAudio.YellerStepLoop
+
+YellerOpPlaySquare1:
+    bit YELLER_FLAGB_USES_CH1, e
+    jr z, :+
+        ; Skip parameters
+        ld hl, 3
+        add hl, bc
+
+        jp UpdateAudio.YellerStepLoop
+    :
+
+    set YELLER_FLAGB_USES_CH1, d
+
+    ; Move bc to hl
+    ld h, b
+    ld l, c
+
+    ; Set sweep
+    xor a
+    ldh [rNR10], a
+
+    ; Get duty and high period bits
+    ld a, [hl+]
+    ld b, a
+    and a, $07
+    ld c, a
+    xor b
+
+    ; Set duty
+    ldh [rNR11], a
+
+    ; Set envelope
+    ld a, [hl+]
+    ldh [rNR12], a
+
+    ; Set frequency and trigger
+    ld a, [hl+]
+    ldh [rNR13], a
+    ld a, $80
+    or c
+    ldh [rNR14], a
+
+    jp UpdateAudio.YellerStepLoop
+
+YellerOpPlaySquare2:
+    bit YELLER_FLAGB_USES_CH2, e
+    jr z, :+
+        ; Skip parameters
+        ld hl, 3
+        add hl, bc
+
+        jp UpdateAudio.YellerStepLoop
+    :
+
+    set YELLER_FLAGB_USES_CH2, d
+
+    ; Move bc to hl
+    ld h, b
+    ld l, c
+
+    ; Get duty and high period bits
+    ld a, [hl+]
+    ld b, a
+    and a, $07
+    ld c, a
+    xor b
+
+    ; Set duty
+    ldh [rNR21], a
+
+    ; Set envelope
+    ld a, [hl+]
+    ldh [rNR22], a
+
+    ; Set frequency and trigger
+    ld a, [hl+]
+    ldh [rNR23], a
+    ld a, $80
+    or c
+    ldh [rNR24], a
+    
+    jp UpdateAudio.YellerStepLoop
+
+YellerOpPlayWave:
+    bit YELLER_FLAGB_USES_CH4, e
+    jr z, :+
+        ld hl, 3
+        add hl, bc
+
+        jp UpdateAudio.YellerStepLoop
+    :
+
+    set YELLER_FLAGB_USES_CH4, d
+
+    ; Get wave pointer
+    ld a, [bc]
+    and a, $F0
+    ld l, a
+    ld a, [bc]
+    xor l
+    add 0;HIGH(WaveTable)
+    ld h, a
+
+    ; Turn off DAC while loading
+    xor a
+    ldh [rNR30], a
+
+    ; Load wave pointer
+    FOR WAVE_IT, 0, 15
+        ld a, [hl+]
+        ldh [_AUD3WAVERAM + WAVE_IT], a
+    ENDR
+
+    ; Increment bc and move to hl
+    inc bc
+    ld h, b
+    ld l, c
+
+    ; Set low period byte
+    ld a, [hl+]
+    ldh [rNR33], a
+
+    ; Get volume and high frequency bits
+    ld a, [hl+]
+    
+    ; Set volume
+    ldh [rNR32], a
+    
+    ; Turn on DAC and trigger
+    ; Assume that the top bit of a is set
+    and $87
+    ldh [rNR30], a ; We only care about the top bit of this register, which happens to be set in a.
+    ldh [rNR34], a
+    
+    jp UpdateAudio.YellerStepLoop
+
+YellerOpPlayNoise:
+    bit YELLER_FLAGB_USES_CH4, e
+    jr z, :+
+        ld hl, 2
+        add hl, bc
+
+        jr UpdateAudio.YellerStepLoop
+    :
+
+    set YELLER_FLAGB_USES_CH4, d
+
+    ; Move bc to hl
+    ld h, b
+    ld l, c
+
+    ; Set timer
+    xor a
+    ldh [rNR41], a
+
+    ; Set envelope
+    ld a, [hl+]
+    ldh [rNR42], a
+
+    ; Set frequency and state size
+    ld a, [hl+]
+    ldh [rNR43], a
+
+    ; Set trigger
+    ld a, $80
+    ldh [rNR44], a
+    
+    jp UpdateAudio.YellerStepLoop
 
 ; Initializes all memory used by the audio system.
 ; 
@@ -148,13 +391,13 @@ UpdateAudio::
 
     ; Process all yellers
     ; `b` is now a bitfield of used channels.
-    UpdateAudio_YellerLoopStart:
+    .YellerLoopStart:
         ; Get yeller flags
         ld a, [hl+]
 
         ; If yeller is vacant, then skip
         or a
-        jp z, UpdateAudio_YellerLoopCondEarly
+        jp z, .YellerLoopCondEarly
 
         ; Decrease next step delay
         dec [hl]
@@ -165,7 +408,7 @@ UpdateAudio::
             or e
             ld e, a
 
-            jp UpdateAudio_YellerLoopCondEarly
+            jp .YellerLoopCondEarly
         :
 
         ; Save yeller flags in `d`
@@ -179,7 +422,7 @@ UpdateAudio::
         ld l, a
 
         ; This is a loop, since multiple steps may take place on the same frame if they have delays of 0.
-        UpdateAudio_StepLoopStart:
+        .YellerStepLoop:
             ; Loop variables:
             ; - `d` contains the state flags of the yeller.
             ; - `e` contains the union of the state flags of all higher-priority yellers.
@@ -192,239 +435,32 @@ UpdateAudio::
             ; Fetch step code
             ld a, [hl+]
 
-            ; YELLER_OPS_NOP
-            or a
-            jp z, UpdateAudio_StepLoopCond
+            ; End if this is a delay op
+            bit 0, a
+            jr nz, .EndStepLoop
 
-            ; YELLER_OPS_TERMINATE
-            dec a
-            jr nz, .YellerOpsTerminateEnd
-                ; Stop all audio channels used by this yeller
-                bit YELLER_FLAGB_USES_CH1, d
-                jr z, :+
-                    ld a, 0
-                    ldh [rNR12], a
-                :
+            ; Move hl to bc
+            ld b, h
+            ld c, l
 
-                ; Since we know this is the final step in the sequence, we can terminate the loop early.
-                ; Terminator steps also aren't followed by a delay value.
+            ; Translate opcode to jump table pointer
+            ; Since odd numbers indicate delays, all other opcodes are even.
+            ; This is convenient since jump addresses occupy two bytes, each.
+            ASSERT LOW(YellerOpJumpTable) == 0
+            ld l, a
+            ld h, HIGH(YellerOpJumpTable)
 
-                ; Recover yeller iterator pointer from stack
-                pop hl
-
-                ; Clear all flags
-                dec l
-                xor a
-                ld [hl+], a
-
-                ; Jump straight to the check of the yeller loop, skipping right past the usual yeller state update.
-                jp UpdateAudio_YellerLoopCondEarly
-            .YellerOpsTerminateEnd
-
-            ; YELLER_OPS_JUMP
-            dec a
-            jr nz, :+
-                ; Get destination address
-                ld a, [hl+]
-                ld b, a
-                ld a, [hl+]
-                ld c, a
-
-                ; Get delay
-                ld a, [hl+]
-
-                ; Apply destination address
-                ld l, c
-                ld h, b
-
-                ; Continue step loop
-                jp UpdateAudio_StepLoopCondWithDelay
-            :
-
-            ; YELLER_OPS_JUMP_UNLESS_SIGNAL
-            dec a
-            jr nz, :++
-                ; Skip if YELLER_FLAGF_BREAK_LOOP is set
-                bit YELLER_FLAGB_BREAK_LOOP, c
-                jr z, :+
-                    ; Skip step params
-                    ld de, 3
-                    add hl, de
-
-                    ; Continue step loop
-                    jp UpdateAudio_StepLoopCond
-                :
-
-                ; Get destination offset
-                ld a, [hl+]
-                ld c, a
-                ld a, [hl+]
-                ld b, a
-
-                ; Get delay
-                ld a, [hl+]
-
-                ; Apply destination address
-                add hl, bc
-
-                ; Continue step loop
-                jp UpdateAudio_StepLoopCondWithDelay
-            :
-
-            ; YELLER_OPS_SET_WAVE_PATTERN
-            dec a
-            jr nz, :++
-                ; Load source address
-                
-
-                push hl
-
-                ; Perform the copy
-                :
-                    ; Partially unrolled; Amount can be adjusted, but must be a power of two and no more than 16.
-                    REPT 4
-                    ld a, [hl+]
-                    ldh [c], a
-                    inc c
-                    ENDR
-
-                    ; Range goes from FF30 to FF3F, so we know we're finished when bit 4 of c is cleared.
-                    bit 4, c
-                    jr nz, :-
-                ;
-
-                pop hl
-            :
-
-            ; YELLER_OPS_BASIC_SQUAVE
-            dec a
-            jr nz, :+
-                bit YELLER_FLAGB_USES_CH1, e
-                jr nz, UpdateAudio_StepLoopCond
-
-                set YELLER_FLAGB_USES_CH1, d
-            
-                ; Set sweep
-                ld a, 0 ; No sweep
-                ldh [rNR10], a
-
-                ; Set duty
-                ld a, AUDLEN_DUTY_12_5
-                ldh [rNR11], a
-
-                ; Set envelope
-                ld a, $F0
-                ldh [rNR12], a
-
-                ; Set frequency and trigger
-                ld a, LOW(1750)
-                ldh [rNR13], a
-                ld a, HIGH(1750) | AUDHIGH_RESTART
-                ldh [rNR14], a
-            :
-
-            ; YELLER_OPS_PLAY_SQUARE_WAVE
-            dec a
-            jr nz, .YellerOpsPlaySquareWaveEnd
-                bit YELLER_FLAGB_USES_CH1, e
-                jr z, :+
-                    ; Skip parameters
-                    ld bc, 5
-                    add hl, bc
-
-                    jr UpdateAudio_StepLoopCond
-                :
-
-                set YELLER_FLAGB_USES_CH1, d
-
-                ; Set sweep
-                ld a, [hl+]
-                ldh [rNR10], a
-
-                ; Set duty
-                ld a, [hl+]
-                ldh [rNR11], a
-
-                ; Set envelope
-                ld a, [hl+]
-                ldh [rNR12], a
-
-                ; Set frequency and trigger
-                ld a, [hl+]
-                ldh [rNR13], a
-                ld a, [hl+]
-                ldh [rNR14], a
-            .YellerOpsPlaySquareWaveEnd
-
-            ; YELLER_OPS_PLAY_SQUARE_WAVE_2
-            dec a
-            jr nz, .YellerOpsPlaySquareWave2End
-                bit YELLER_FLAGB_USES_CH2, e
-                jr z, :+
-                    ld bc, 4
-                    add hl, bc
-
-                    jr UpdateAudio_StepLoopCond
-                :
-
-                set YELLER_FLAGB_USES_CH2, d
-
-                ; Set duty
-                ld a, [hl+]
-                ldh [rNR21], a
-
-                ; Set envelope
-                ld a, [hl+]
-                ldh [rNR22], a
-
-                ; Set frequency and trigger
-                ld a, [hl+]
-                ldh [rNR23], a
-                ld a, [hl+]
-                ldh [rNR24], a
-            .YellerOpsPlaySquareWave2End
-
-            dec a
-
-            dec a
-            jr nz, .YellerOpsPlayNoiseWaveEnd
-                bit YELLER_FLAGB_USES_CH4, e
-                jr z, :+
-                    ld bc, 4
-                    add hl, bc
-
-                    jr UpdateAudio_StepLoopCond
-                :
-
-                set YELLER_FLAGB_USES_CH2, d
-
-                ; Set timer
-                xor a
-                ldh [rNR41], a
-
-                ; Set envelope
-                ld a, [hl+]
-                ldh [rNR42], a
-
-                ; Set frequency and state size
-                ld a, [hl+]
-                ldh [rNR43], a
-
-                ; Set trigger
-                ld a, $80
-                ldh [rNR44], a
-            .YellerOpsPlayNoiseWaveEnd
-
-        UpdateAudio_StepLoopCond:
-            ; Get next delay
+            ; Load jump pointer
             ld a, [hl+]
+            ld h, [hl]
+            ld l, a
 
-        UpdateAudio_StepLoopCondWithDelay:
-            ; Continue loop if delay is zero
-            or a
-            jp z, UpdateAudio_StepLoopStart
+            jp hl
 
-        UpdateAudio_StepLoopEnd:
+        .EndStepLoop:
+
+        ; Halve delay value
+        srl a
 
         ; Recover yeller iterator pointer from stack
         ld b, h
@@ -452,42 +488,38 @@ UpdateAudio::
         ; Terminate loop if this was the final yeller
         ld a, l
         cp a, LOW(wYellerStates + YELLER_SIZE * MAX_NUM_YELLERS - 1)
-        jr z, UpdateAudio_YellerLoopEnd
+        jr z, .YellerLoopEnd
 
         ; Continue loop
         inc l
-        jp UpdateAudio_YellerLoopStart
+        jp .YellerLoopStart
 
-    UpdateAudio_YellerLoopCondEarly:
+    .YellerLoopCondEarly:
         ; There are probably more efficient places to put this. May optimize later.
 
         ld a, l
         
         ; Terminate loop if this is the last yeller
         cp LOW(wYellerStates + YELLER_SIZE * MAX_NUM_YELLERS - 3)
-        jr z, UpdateAudio_YellerLoopEnd
+        jr z, .YellerLoopEnd
 
         ; Otherwise, update the pointer and process the next yeller
         add a, 3
         ld l, a
-        jp UpdateAudio_YellerLoopStart
+        jp .YellerLoopStart
 
-    UpdateAudio_YellerLoopEnd:
+    .YellerLoopEnd:
 
     ret
 
 ; Some epic test sounds
 EpicTestSoundOne::
-    db YELLER_OPS_BASIC_SQUAVE
-    db 4
-
     db YELLER_OPS_PLAY_SQUARE_WAVE
-    db $1C
-    db $00
+    db $06
     db $F3
     db 214
-    db $86
-    db 16
+
+    YELLER_DELAY_OP 16
     
     db YELLER_OPS_TERMINATE
 

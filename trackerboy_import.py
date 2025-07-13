@@ -38,7 +38,7 @@ class Song:
         self.sections.append(section)
     
     def emit_yeller_code(self):
-        out = b"\0" # Start with a no-op for now to keep things consistent.
+        out = b""
 
         fpr = self.speed / 16
 
@@ -98,7 +98,8 @@ class Song:
                     event_frame = math.floor(fpr * (curr_event.time + section_row_offset))
                     event_delay = event_frame - last_event_frame
                     last_event_frame = event_frame
-                    out += event_delay.to_bytes(1, byteorder="little")
+                    if event_delay != 0:
+                        out += (event_delay * 2 + 1).to_bytes(1, byteorder="little")
 
                 event_code = curr_event.emit({
                     "song": self,
@@ -142,20 +143,26 @@ class NoteEvent(Event):
             frequency = 440 * math.pow(2, (self.note - 34) / 12)
             period_value = 2048 - math.floor(131072 / frequency)
 
-            duty_time_byte = (emit_state["effect_state"]["duty"] << 6).to_bytes(1, byteorder="little")
+            duty_bits = emit_state["effect_state"]["duty"] << 6
+            period_value_high_bits = period_value // 256
+            duty_period_byte = (duty_bits | period_value_high_bits).to_bytes(1, byteorder="little")
 
             envelope_byte = emit_state["effect_state"]["envelope"].to_bytes(1, byteorder="little")
 
             period_value_low_byte = (period_value % 256).to_bytes(1, byteorder="little")
-            period_value_high_byte = ((period_value // 256) | 0x80).to_bytes(1, byteorder="little")
 
             match channel:
                 case 0:
-                    return (b"\x06\0" + duty_time_byte + envelope_byte + period_value_low_byte) + period_value_high_byte
+                    return (b"\x08" + duty_period_byte + envelope_byte + period_value_low_byte)
                 case 1:
-                    return (b"\x07" + duty_time_byte + envelope_byte + period_value_low_byte) + period_value_high_byte
+                    return (b"\x0A" + duty_period_byte + envelope_byte + period_value_low_byte)
 
         if channel == 2:
+            frequency = 440 * math.pow(2, (self.note - 34) / 12)
+            period_value = 2048 - math.floor(131072 / frequency)
+
+            waveform_byte = emit_state["effect_state"]["envelope"].to_bytes(1, byteorder="little")
+
             return b"" # TODO
 
         if channel == 3:
@@ -169,14 +176,14 @@ class NoteEvent(Event):
             freq_state_val = ((freq_exponent << 4) + (emit_state["effect_state"]["duty"] << 3) + freq_div)
             freq_state_byte = freq_state_val.to_bytes(1, byteorder="little", signed=False)
 
-            return b"\x09" + envelope_byte + freq_state_byte
+            return b"\x0E" + envelope_byte + freq_state_byte
     
     def get_size(self, channel):
         match channel:
             case 0:
-                return 6
+                return 4
             case 1:
-                return 5
+                return 4
             case 2:
                 return 0
             case 3:
@@ -213,7 +220,7 @@ class JumpEvent(Event):
                 delay = pattern_start_time
         delay_byte = pattern_start_time.to_bytes(1, byteorder="little")
 
-        return b"\x03" + offset_bytes + delay_byte
+        return b"\x04" + offset_bytes + delay_byte
 
     def get_size(self, channel):
         return 4
