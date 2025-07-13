@@ -11,10 +11,14 @@ class Module:
         self.copyright = copyright
         
         self.songs = []
-        self.waveforms = []
+        self.waveforms = [None] * 64
 
     def add_song(self, song):
+        song.module = self
         self.songs.append(song)
+    
+    def add_wave(self, wave_id, waveform_index):
+        self.waveforms[wave_id] = waveform_index
 
 class Song:
     def __init__(self, title, rows_per_beat, rows_per_measure, speed, rows_per_segment):
@@ -27,6 +31,8 @@ class Song:
 
         self.patterns = [[None] * 256, [None] * 256, [None] * 256, [None] * 256]
         self.sections = []
+
+        self.module = None
     
     def add_pattern(self, channel, pattern_id, pattern):
         if verbose:
@@ -139,6 +145,17 @@ class NoteEvent(Event):
     def emit(self, emit_state):
         channel = emit_state["channel"]
 
+        if self.note == 0x55:
+            match channel:
+                case 0:
+                    return b"\x10"
+                case 1:
+                    return b"\x12"
+                case 2:
+                    return b"\x14"
+                case 3:
+                    return b"\x16"
+
         if channel == 0 or channel == 1:
             frequency = 440 * math.pow(2, (self.note - 34) / 12)
             period_value = 2048 - math.floor(131072 / frequency)
@@ -161,9 +178,16 @@ class NoteEvent(Event):
             frequency = 440 * math.pow(2, (self.note - 34) / 12)
             period_value = 2048 - math.floor(131072 / frequency)
 
-            waveform_byte = emit_state["effect_state"]["envelope"].to_bytes(1, byteorder="little")
+            waveform_index = emit_state["song"].module.waveforms[emit_state["effect_state"]["envelope"]]
+            waveform_byte = waveform_index.to_bytes(1, byteorder="little")
 
-            return b"" # TODO
+            period_value_low_byte = (period_value % 256).to_bytes(1, byteorder="little")
+
+            volume_bits = emit_state["effect_state"]["duty"] << 5
+            period_value_high_bits = period_value // 256
+            volume_period_byte = (0x80 | volume_bits | period_value_high_bits).to_bytes(1, byteorder="little")
+
+            return b"\x0C" + waveform_byte + period_value_low_byte + volume_period_byte
 
         if channel == 3:
             # The "notes" specified in Trackerboy don't actually match the standard frequencies of musical notes.
@@ -185,7 +209,7 @@ class NoteEvent(Event):
             case 1:
                 return 4
             case 2:
-                return 0
+                return 4
             case 3:
                 return 3
 
@@ -249,121 +273,136 @@ def read_int(in_stream, num_bytes):
     in_bytes = in_stream.read(num_bytes)
     return int.from_bytes(in_bytes, byteorder="little")
 
-def load_module(in_stream):
-    module_signature = in_stream.read(12)
-    if module_signature != b"\0TRACKERBOY\0":
-        print(module_signature)
-        return "INVALID"
+
+class TrackerboyCompiler:
+    def __init__(self):
+        self.wavetable = b""
+        self.next_waveform_index = 0
     
-    in_stream.read(16) # Unknown meaning
+    def load_module(self, in_stream):
+        module_signature = in_stream.read(12)
+        if module_signature != b"\0TRACKERBOY\0":
+            print(module_signature)
+            return "INVALID"
+        
+        in_stream.read(16) # Unknown meaning
 
-    module_title = in_stream.read(32).rstrip(b"\0")
-    author = in_stream.read(32).rstrip(b"\0")
-    copyright = in_stream.read(32).rstrip(b"\0")
+        module_title = in_stream.read(32).rstrip(b"\0")
+        author = in_stream.read(32).rstrip(b"\0")
+        copyright = in_stream.read(32).rstrip(b"\0")
 
-    in_stream.read(36) # Unknown meaning
+        in_stream.read(36) # Unknown meaning
 
-    out_module = Module(module_title, author, copyright)
+        out_module = Module(module_title, author, copyright)
 
-    for _ in range(100):
-        section_tag = in_stream.read(4)
-        if section_tag == b"\0YOB":
-            # This isn't section header. This is start of footer!
-            footer = in_stream.read(8)
-            if footer != b"REKCART\0":
-                return "INVALID"
-            break
+        for _ in range(100):
+            section_tag = in_stream.read(4)
+            if section_tag == b"\0YOB":
+                # This isn't section header. This is start of footer!
+                footer = in_stream.read(8)
+                if footer != b"REKCART\0":
+                    return "INVALID"
+                break
 
-        section_length = read_int(in_stream, 4)
+            section_length = read_int(in_stream, 4)
 
-        match section_tag:
-            case b"COMM":
-                # Comment section. Contents bear no meaning.
-                in_stream.read(section_length)
-            case b"SONG":
-                # Song section
-                song_title_length = read_int(in_stream, 2)
-                song_title = in_stream.read(song_title_length)
+            match section_tag:
+                case b"COMM":
+                    # Comment section. Contents bear no meaning.
+                    in_stream.read(section_length)
+                case b"SONG":
+                    # Song section
+                    song_title_length = read_int(in_stream, 2)
+                    song_title = in_stream.read(song_title_length)
 
-                rows_per_beat = read_int(in_stream, 1)
-                rows_per_measure = read_int(in_stream, 1)
-                speed = read_int(in_stream, 1)
-                num_segments = read_int(in_stream, 1) + 1
-                rows_per_segment = read_int(in_stream, 1) + 1
-                num_patterns = read_int(in_stream, 1)
-                in_stream.read(2) # Unknown meaning
+                    rows_per_beat = read_int(in_stream, 1)
+                    rows_per_measure = read_int(in_stream, 1)
+                    speed = read_int(in_stream, 1)
+                    num_segments = read_int(in_stream, 1) + 1
+                    rows_per_segment = read_int(in_stream, 1) + 1
+                    num_patterns = read_int(in_stream, 1)
+                    in_stream.read(2) # Unknown meaning
 
-                song = Song(song_title, rows_per_beat, rows_per_measure, speed, rows_per_segment)
+                    song = Song(song_title, rows_per_beat, rows_per_measure, speed, rows_per_segment)
 
-                for _ in range(num_segments):
-                    sq1_pattern_index = read_int(in_stream, 1)
-                    sq2_pattern_index = read_int(in_stream, 1)
-                    wav_pattern_index = read_int(in_stream, 1)
-                    noi_pattern_index = read_int(in_stream, 1)
-                    song.add_section([sq1_pattern_index, sq2_pattern_index, wav_pattern_index, noi_pattern_index])
-                
-                for _ in range(num_patterns):
-                    pattern_channel = read_int(in_stream, 1)
-                    pattern_id = read_int(in_stream, 1)
+                    for _ in range(num_segments):
+                        sq1_pattern_index = read_int(in_stream, 1)
+                        sq2_pattern_index = read_int(in_stream, 1)
+                        wav_pattern_index = read_int(in_stream, 1)
+                        noi_pattern_index = read_int(in_stream, 1)
+                        song.add_section([sq1_pattern_index, sq2_pattern_index, wav_pattern_index, noi_pattern_index])
                     
-                    if verbose:
-                        print(f"Loading pattern {pattern_id} of channel {pattern_channel}...")
-                    
-                    new_pattern = Pattern()
-
-                    num_event_times = read_int(in_stream, 1) + 1
-                    for _ in range(num_event_times):
-                        event_time = read_int(in_stream, 1)
-
-                        tone = read_int(in_stream, 1)
-                        # Add note event later so effects can be applied first
+                    for _ in range(num_patterns):
+                        pattern_channel = read_int(in_stream, 1)
+                        pattern_id = read_int(in_stream, 1)
                         
-                        in_stream.read(1) # Unknown meaning
+                        if verbose:
+                            print(f"Loading pattern {pattern_id} of channel {pattern_channel}...")
+                        
+                        new_pattern = Pattern()
 
-                        for _ in range(3):
-                            effect_code = read_int(in_stream, 1)
-                            effect_parameter = read_int(in_stream, 1)
+                        num_event_times = read_int(in_stream, 1) + 1
+                        for _ in range(num_event_times):
+                            event_time = read_int(in_stream, 1)
 
-                            match effect_code:
-                                case 0:
-                                    pass
-                                case 1:
-                                    new_pattern.add_event(JumpEvent(event_time + 1, effect_parameter))
-                                case 6:
-                                    new_pattern.add_event(ParameterEvent(event_time, "envelope", effect_parameter))
-                                case 7:
-                                    new_pattern.add_event(ParameterEvent(event_time, "duty", effect_parameter))
-                                case _:
-                                    assert(False)
+                            tone = read_int(in_stream, 1)
+                            # Add note event later so effects can be applied first
+                            
+                            in_stream.read(1) # Unknown meaning
 
-                        if tone == 0x55:
-                            # TODO: Implement note stop event and use that here
-                            pass
-                        elif tone != 0:
-                            new_pattern.add_event(NoteEvent(event_time, tone))
+                            for _ in range(3):
+                                effect_code = read_int(in_stream, 1)
+                                effect_parameter = read_int(in_stream, 1)
 
-                    song.add_pattern(pattern_channel, pattern_id, new_pattern)
+                                match effect_code:
+                                    case 0:
+                                        pass
+                                    case 1:
+                                        new_pattern.add_event(JumpEvent(event_time + 1, effect_parameter))
+                                    case 6:
+                                        new_pattern.add_event(ParameterEvent(event_time, "envelope", effect_parameter))
+                                    case 7:
+                                        new_pattern.add_event(ParameterEvent(event_time, "duty", effect_parameter))
+                                    case _:
+                                        assert(False)
 
-                out_module.add_song(song)
-            case b"WAVE":
-                wave_id = read_int(in_stream, 1)
+                            if tone == 0x55:
+                                # TODO: Implement note stop event and use that here
+                                pass
+                            elif tone != 0:
+                                new_pattern.add_event(NoteEvent(event_time, tone))
 
-                wave_name_length = read_int(in_stream, 2)
-                wave_name = in_stream.read(wave_name_length)
+                        song.add_pattern(pattern_channel, pattern_id, new_pattern)
 
-                wave_shape = in_stream.read(16)
+                    out_module.add_song(song)
+                case b"WAVE":
+                    wave_id = read_int(in_stream, 1)
 
-            case _:
-                section_tag_byte_formatted = " ".join(f"{c:02x}" for c in section_tag)
-                print(f"Unexpected section tag: {section_tag} ({section_tag_byte_formatted})")
-                assert(False)
-    
-    return out_module
+                    wave_name_length = read_int(in_stream, 2)
+                    wave_name = in_stream.read(wave_name_length)
 
-def compile_file(infile, outfile):
-    instream = open(infile, "rb")
-    module = load_module(instream)
-    compiled = module.songs[0].emit_yeller_code()
-    os.makedirs(os.path.dirname(outfile), exist_ok=True)
-    outstream = open(outfile, 'w+b')
-    outstream.write(compiled)
+                    wave_shape = in_stream.read(16)
+
+                    self.wavetable += wave_shape
+
+                    out_module.add_wave(wave_id, self.next_waveform_index)
+                    self.next_waveform_index += 1
+
+                case _:
+                    section_tag_byte_formatted = " ".join(f"{c:02x}" for c in section_tag)
+                    print(f"Unexpected section tag: {section_tag} ({section_tag_byte_formatted})")
+                    assert(False)
+        
+        return out_module
+
+    def compile_file(self, infile, outfile):
+        instream = open(infile, "rb")
+        module = self.load_module(instream)
+        compiled = module.songs[0].emit_yeller_code()
+        os.makedirs(os.path.dirname(outfile), exist_ok=True)
+        outstream = open(outfile, 'w+b')
+        outstream.write(compiled)
+
+    def output_wavetable(self, outfile):
+        outstream = open(outfile, 'w+b')
+        outstream.write(self.wavetable)

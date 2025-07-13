@@ -98,30 +98,30 @@ YellerOpJumpTable:
         dw YellerOpInvalid
     ENDR
 
+WaveTable:
+    INCBIN "WaveTable.bin"
+
 YellerOpInvalid:
     ld hl, ErrorInvalidYellerOpcode
     rst VecError
 
 YellerOpTerminate:
     ; Stop all audio channels used by this yeller
+    xor a
     bit YELLER_FLAGB_USES_CH1, d
     jr z, :+
-        ld a, 0
         ldh [rNR12], a
     :
     bit YELLER_FLAGB_USES_CH2, d
     jr z, :+
-        ld a, 0
         ldh [rNR22], a
     :
     bit YELLER_FLAGB_USES_CH3, d
     jr z, :+
-        ld a, 0
         ldh [rNR30], a
     :
     bit YELLER_FLAGB_USES_CH4, d
     jr z, :+
-        ld a, 0
         ldh [rNR42], a
     :
 
@@ -269,7 +269,7 @@ YellerOpPlayWave:
     ld l, a
     ld a, [bc]
     xor l
-    add 0;HIGH(WaveTable)
+    add HIGH(WaveTable)
     ld h, a
 
     ; Turn off DAC while loading
@@ -311,7 +311,7 @@ YellerOpPlayNoise:
         ld hl, 2
         add hl, bc
 
-        jr UpdateAudio.YellerStepLoop
+        jp UpdateAudio.YellerStepLoop
     :
 
     set YELLER_FLAGB_USES_CH4, d
@@ -336,6 +336,50 @@ YellerOpPlayNoise:
     ld a, $80
     ldh [rNR44], a
     
+    jp UpdateAudio.YellerStepLoop
+
+YellerOpStopSquare1:
+    bit YELLER_FLAGB_USES_CH1, d
+    jr z, :+
+        xor a
+        ldh [rNR12], a
+        
+        res YELLER_FLAGB_USES_CH1, d
+    :
+    
+    jp UpdateAudio.YellerStepLoop
+
+YellerOpStopSquare2:
+    bit YELLER_FLAGB_USES_CH2, d
+    jr z, :+
+        xor a
+        ldh [rNR22], a
+        
+        res YELLER_FLAGB_USES_CH2, d
+    :
+
+    jp UpdateAudio.YellerStepLoop
+
+YellerOpStopWave:
+    bit YELLER_FLAGB_USES_CH3, d
+    jr z, :+
+        xor a
+        ldh [rNR30], a
+        
+        res YELLER_FLAGB_USES_CH3, d
+    :
+
+    jp UpdateAudio.YellerStepLoop
+
+YellerOpStopNoise:
+    bit YELLER_FLAGB_USES_CH4, d
+    jr z, :+
+        xor a
+        ldh [rNR42], a
+        
+        res YELLER_FLAGB_USES_CH4, d
+    :
+
     jp UpdateAudio.YellerStepLoop
 
 ; Initializes all memory used by the audio system.
