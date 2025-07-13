@@ -94,6 +94,11 @@ YellerOpJumpTable:
     dw YellerOpPlayWave
     dw YellerOpPlayNoise
 
+    dw YellerOpStopSquare1
+    dw YellerOpStopSquare2
+    dw YellerOpStopWave
+    dw YellerOpStopNoise
+
     REPT ($100 - (@ - YellerOpJumpTable)) / 2
         dw YellerOpInvalid
     ENDR
@@ -109,19 +114,19 @@ YellerOpTerminate:
     ; Stop all audio channels used by this yeller
     xor a
     bit YELLER_FLAGB_USES_CH1, d
-    jr z, :+
+    jr nz, :+
         ldh [rNR12], a
     :
     bit YELLER_FLAGB_USES_CH2, d
-    jr z, :+
+    jr nz, :+
         ldh [rNR22], a
     :
     bit YELLER_FLAGB_USES_CH3, d
-    jr z, :+
+    jr nz, :+
         ldh [rNR30], a
     :
     bit YELLER_FLAGB_USES_CH4, d
-    jr z, :+
+    jr nz, :+
         ldh [rNR42], a
     :
 
@@ -340,45 +345,57 @@ YellerOpPlayNoise:
 
 YellerOpStopSquare1:
     bit YELLER_FLAGB_USES_CH1, d
-    jr z, :+
+    jr nz, :+
         xor a
         ldh [rNR12], a
         
         res YELLER_FLAGB_USES_CH1, d
     :
     
+    ld h, b
+    ld l, c
+
     jp UpdateAudio.YellerStepLoop
 
 YellerOpStopSquare2:
     bit YELLER_FLAGB_USES_CH2, d
-    jr z, :+
+    jr nz, :+
         xor a
         ldh [rNR22], a
         
         res YELLER_FLAGB_USES_CH2, d
     :
+    
+    ld h, b
+    ld l, c
 
     jp UpdateAudio.YellerStepLoop
 
 YellerOpStopWave:
     bit YELLER_FLAGB_USES_CH3, d
-    jr z, :+
+    jr nz, :+
         xor a
         ldh [rNR30], a
         
         res YELLER_FLAGB_USES_CH3, d
     :
+    
+    ld h, b
+    ld l, c
 
     jp UpdateAudio.YellerStepLoop
 
 YellerOpStopNoise:
     bit YELLER_FLAGB_USES_CH4, d
-    jr z, :+
+    jr nz, :+
         xor a
         ldh [rNR42], a
         
         res YELLER_FLAGB_USES_CH4, d
     :
+    
+    ld h, b
+    ld l, c
 
     jp UpdateAudio.YellerStepLoop
 

@@ -203,6 +203,9 @@ class NoteEvent(Event):
             return b"\x0E" + envelope_byte + freq_state_byte
     
     def get_size(self, channel):
+        if self.note == 0x55:
+            return 1
+        
         match channel:
             case 0:
                 return 4
@@ -366,10 +369,7 @@ class TrackerboyCompiler:
                                     case _:
                                         assert(False)
 
-                            if tone == 0x55:
-                                # TODO: Implement note stop event and use that here
-                                pass
-                            elif tone != 0:
+                            if tone != 0:
                                 new_pattern.add_event(NoteEvent(event_time, tone))
 
                         song.add_pattern(pattern_channel, pattern_id, new_pattern)
