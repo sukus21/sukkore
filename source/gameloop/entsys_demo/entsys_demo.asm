@@ -4,6 +4,7 @@ INCLUDE "macro/numtohex.inc"
 INCLUDE "macro/relpointer.inc"
 INCLUDE "vqueue/vqueue.inc"
 INCLUDE "gameloop/entsys_demo/vram.inc"
+INCLUDE "macro/farcall.inc"
 
 SECTION "TESTLOOP DATA", ROMX
 
@@ -95,6 +96,14 @@ GameloopTest::
     ldh [rLCDC], a
     call WaitVBlank
 
+    ; Initialize audio
+    farcall InitAudio
+
+    ; Play some nice music :{)
+    ; ld bc, MiiChannelSong
+    ld bc, SchombatSong
+    call PlaySound
+
     ; Main loop
     .loop
     call ReadInput
@@ -110,6 +119,13 @@ GameloopTest::
         jr c, :+
         xor a
         ld [hl], a
+    :
+
+    ld a, [wInputPressed]
+    bit PADB_B, a
+    jr z, :+
+        ld bc, EpicTestSoundOne
+        call PlaySound
     :
 
     ; Get sprite Y-position
@@ -324,6 +340,9 @@ GameloopTest::
     ld [hl], 16
     inc l
     ld [hl], e
+
+    ; Do sound updates
+    farcall UpdateAudio
 
     ; Wait for Vblank
     ld h, high(wOAM)

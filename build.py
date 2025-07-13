@@ -2,6 +2,8 @@ import os
 import subprocess as cmd
 import sys
 
+import trackerboy_import
+
 dirtyCheck = True
 
 def escapeCli(inArgs):
@@ -104,6 +106,7 @@ def buildAsmFile(srcPath):
         "-p", "255",
         "-i", "source",
         "-i", "build/gfx/source",
+        "-i", "build/sound",
         "-o", objPath,
         "-M", depPath,
         srcPath,
@@ -140,6 +143,11 @@ def build():
     error = buildGfxFolder("source")
     if error == True:
         os._exit(1)
+    
+    # Compile TrackerBoy music
+    print("\nTrackerboy compile step")
+    trackerboy_import.compile_file("source/sound/music/Mii Channel.tbm", "build/sound/MiiChannel.yellercode")
+    trackerboy_import.compile_file("source/sound/music/Schombat.tbm", "build/sound/Schombat.yellercode")
 
     # Assemble source files with rgbasm
     print("\nRGBASM step...")

@@ -4,6 +4,7 @@
     },
     "rgbdsz80.includePath": [
         "build/gfx/source",
+        "build/sound",
         "source"
     ]
 }

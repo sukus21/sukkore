@@ -706,6 +706,7 @@ ErrorMessages:
     ErrorRomXBankMarker::   create_message "ROMX BANK W/O MARK"
     ErrorRomXBankCount::    create_message "BAD ROMX BANK COUNT"
     ErrorSramBankCount::    create_message "BAD SRAM BANK COUNT"
+    ErrorInvalidYellerOpcode::    create_message "INVALID YELLER OPCODE"
     POPC
 ;
 
