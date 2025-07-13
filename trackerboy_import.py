@@ -2,7 +2,7 @@ import os
 import sys
 import math
 
-verbose = True
+verbose = False
 
 class Module:
     def __init__(self, title, author, copyright):
@@ -183,7 +183,12 @@ class NoteEvent(Event):
 
             period_value_low_byte = (period_value % 256).to_bytes(1, byteorder="little")
 
-            volume_bits = emit_state["effect_state"]["duty"] << 5
+            volume_level = emit_state["effect_state"]["duty"]
+            volume_code = 0
+            if volume_level != 0:
+                volume_code = 4 - volume_level
+
+            volume_bits = volume_code << 5
             period_value_high_bits = period_value // 256
             volume_period_byte = (0x80 | volume_bits | period_value_high_bits).to_bytes(1, byteorder="little")
 
@@ -194,6 +199,13 @@ class NoteEvent(Event):
             # This confused me (tecanec) to no end until I actually read the Trackerboy manual...
             freq_exponent = 14 - ((self.note + 3) // 4)
             freq_div = 7 - ((self.note + 3) % 4)
+
+            if self.note >= 61:
+                freq_div = 0
+                freq_exponent = 0
+            elif self.note >= (61 - 4):
+                freq_div -= 4
+                freq_exponent = 0
             
             envelope_byte = emit_state["effect_state"]["envelope"].to_bytes(1, byteorder="little")
 
@@ -274,7 +286,7 @@ class ParameterEvent(Event):
 
 def read_int(in_stream, num_bytes):
     in_bytes = in_stream.read(num_bytes)
-    return int.from_bytes(in_bytes, byteorder="little")
+    return int.from_bytes(in_bytes, byteorder="little", signed=False)
 
 
 class TrackerboyCompiler:

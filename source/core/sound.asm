@@ -114,19 +114,19 @@ YellerOpTerminate:
     ; Stop all audio channels used by this yeller
     xor a
     bit YELLER_FLAGB_USES_CH1, d
-    jr nz, :+
+    jr z, :+
         ldh [rNR12], a
     :
     bit YELLER_FLAGB_USES_CH2, d
-    jr nz, :+
+    jr z, :+
         ldh [rNR22], a
     :
     bit YELLER_FLAGB_USES_CH3, d
-    jr nz, :+
+    jr z, :+
         ldh [rNR30], a
     :
     bit YELLER_FLAGB_USES_CH4, d
-    jr nz, :+
+    jr z, :+
         ldh [rNR42], a
     :
 
@@ -147,7 +147,7 @@ YellerOpTerminate:
 YellerOpJump:
     ; Skip if YELLER_FLAGF_BREAK_LOOP is set
     bit YELLER_FLAGB_BREAK_LOOP, c
-    jr z, :+
+    jr nz, :+
         ; Skip step params
         ld hl, 3
         add hl, bc
