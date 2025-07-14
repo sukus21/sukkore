@@ -100,9 +100,12 @@ GameloopTest::
     farcall InitAudio
 
     ; Play some nice music :{)
-    ; ld bc, MiiChannelSong
-    ld bc, SchombatSong
-    call PlaySound
+    ld bc, MiiChannelSong
+    call PlayMusic
+
+    ; Also remember what song we're playing
+    xor a
+    ld [wCurrSongId], a
 
     ; Main loop
     .loop
@@ -121,12 +124,70 @@ GameloopTest::
         ld [hl], a
     :
 
+    ; Play sound when removing stuff
     ld a, [wInputPressed]
     bit PADB_B, a
+    jr z, :+
+        ld bc, EpicTestSoundTwo
+        call PlaySound
+    :
+
+    ; Play sound when putting stuff
+    ld a, [wInputPressed]
+    bit PADB_A, a
     jr z, :+
         ld bc, EpicTestSoundOne
         call PlaySound
     :
+
+    ; Switch music when pressing start
+    ld a, [wInputPressed]
+    bit PADB_START, a
+    jr z, .MusicSelectEnd
+        ; Get the current song ID
+        ld a, [wCurrSongId]
+
+        ; Get the next song ID
+        inc a
+        cp a, 4
+        jr nz, :+
+            xor a
+        :
+
+        ; Store the new song ID
+        ld [wCurrSongId], a
+
+        ; Select the song pointer
+        ; Dirty method, but I kinda just want this done
+        or a
+        jr nz, :+
+            ld bc, MiiChannelSong
+            call PlayMusic
+            jr .MusicSelectEnd
+        :
+
+        dec a
+        jr nz, :+
+            ld bc, SchombatSong
+            call PlayMusic
+            jr .MusicSelectEnd
+        :
+
+        dec a
+        jr nz, :+
+            ld bc, HisWorldSong
+            call PlayMusic
+            jr .MusicSelectEnd
+        :
+
+        dec a
+        jr nz, :+
+            ld bc, WheelOfMisfortuneSong
+            call PlayMusic
+            jr .MusicSelectEnd
+        :
+
+    .MusicSelectEnd
 
     ; Get sprite Y-position
     add a, a
@@ -401,3 +462,5 @@ wAllocationDemoY: ds 1
 wAllocationDemoSize: ds 1
 wAllocationDemoPerformance: ds 1
 wAllocationDemoCounter:: ds 1
+
+wCurrSongId: ds 1

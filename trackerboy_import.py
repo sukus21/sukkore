@@ -106,7 +106,6 @@ class Song:
                     last_event_frame = event_frame
                     if event_delay != 0:
                         out += (event_delay * 2 + 1).to_bytes(1, byteorder="little")
-
                 event_code = curr_event.emit({
                     "song": self,
                     "channel": curr_channel,
@@ -116,6 +115,25 @@ class Song:
                 })
                 assert(len(event_code) == curr_event.get_size(curr_channel))
                 out += event_code
+
+                if type(curr_event) is JumpEvent:
+                    print("Found jump event")
+                    return out
+            
+            section_end_frame = math.floor(fpr * (section_row_offset + self.rows_per_segment))
+            section_end_delay = section_end_frame - last_event_frame
+            if section_end_delay != 0:
+                print(section_end_delay, last_event_frame, self.title)
+                out += (section_end_delay * 2 + 1).to_bytes(1, byteorder="little", signed=False)
+                last_event_frame = section_end_frame
+
+        out += JumpEvent(0, 0).emit({
+            "song": self,
+            "channel": 0,
+            "next_byte_index": len(out),
+            "effect_state": effect_state[0],
+            "section_starts": section_starts,
+        })
         
         return out
 
@@ -179,7 +197,8 @@ class NoteEvent(Event):
             period_value = 2048 - math.floor(131072 / frequency)
 
             waveform_index = emit_state["song"].module.waveforms[emit_state["effect_state"]["envelope"]]
-            waveform_byte = waveform_index.to_bytes(1, byteorder="little")
+            waveform_index_rot = waveform_index >> 4 | ((waveform_index << 4) & 0xF0)
+            waveform_byte = waveform_index_rot.to_bytes(1, byteorder="little")
 
             period_value_low_byte = (period_value % 256).to_bytes(1, byteorder="little")
 
@@ -237,7 +256,7 @@ class JumpEvent(Event):
     def emit(self, emit_state):
         song = emit_state["song"]
 
-        offset = -emit_state["next_byte_index"] - 3
+        offset = -emit_state["next_byte_index"] - 4
         # for section in song.sections[:self.section]:
         #     for channel_i in range(4):
         #         pattern = song.patterns[channel_i][section[channel_i]]
@@ -249,15 +268,19 @@ class JumpEvent(Event):
         
         offset_bytes = offset.to_bytes(2, byteorder="little", signed=True)
 
-        delay = 99999
-        for channel_i in range(4):
-            pattern = song.patterns[channel_i][song.sections[self.section][channel_i]]
-            if pattern == None:
-                continue
-            pattern_start_time = pattern.events[0].time
-            if pattern_start_time < delay:
-                delay = pattern_start_time
-        delay_byte = pattern_start_time.to_bytes(1, byteorder="little")
+        print(offset)
+
+        # TODO: Calculate delay properly. Note that destination may begin with a delay operation.
+        # delay = 99999
+        # for channel_i in range(4):
+        #     pattern = song.patterns[channel_i][song.sections[self.section - 1][channel_i]]
+        #     if pattern == None:
+        #         continue
+        #     pattern_end_time = pattern.events[0].time
+        #     if pattern_start_time < delay:
+        #         delay = pattern_start_time
+        delay = 0
+        delay_byte = delay.to_bytes(1, byteorder="little")
 
         return b"\x04" + offset_bytes + delay_byte
 
@@ -378,8 +401,8 @@ class TrackerboyCompiler:
                                         new_pattern.add_event(ParameterEvent(event_time, "envelope", effect_parameter))
                                     case 7:
                                         new_pattern.add_event(ParameterEvent(event_time, "duty", effect_parameter))
-                                    case _:
-                                        assert(False)
+                                    #case _:
+                                        #assert(False)
 
                             if tone != 0:
                                 new_pattern.add_event(NoteEvent(event_time, tone))
@@ -387,6 +410,8 @@ class TrackerboyCompiler:
                         song.add_pattern(pattern_channel, pattern_id, new_pattern)
 
                     out_module.add_song(song)
+                case b"INST":
+                    in_stream.read(section_length)
                 case b"WAVE":
                     wave_id = read_int(in_stream, 1)
 

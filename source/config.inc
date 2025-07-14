@@ -7,7 +7,7 @@ DEF CONFIG_DEV EQU 1
 
 ; Number of total ROM banks, including ROM0.
 ; This has to be manually updated as the ROM size grows.
-DEF CONFIG_ROM_BANK_COUNT EQU 2
+DEF CONFIG_ROM_BANK_COUNT EQU 4
 
 ; Number of total SRAM banks.
 ; This has to be manually updated, as potential savegames grow in size.

@@ -148,7 +148,9 @@ def build():
     print("\nTrackerboy compile step")
     trackerboy_importer = trackerboy_import.TrackerboyCompiler()
     trackerboy_importer.compile_file("source/sound/music/Mii Channel.tbm", "build/sound/MiiChannel.yellercode")
+    trackerboy_importer.compile_file("source/sound/music/Wheel of Misfortune.tbm", "build/sound/WheelOfMisfortune.yellercode")
     trackerboy_importer.compile_file("source/sound/music/Schombat.tbm", "build/sound/Schombat.yellercode")
+    trackerboy_importer.compile_file("source/sound/music/His World.tbm", "build/sound/HisWorld.yellercode")
     trackerboy_importer.output_wavetable("build/sound/WaveTable.bin")
 
     # Assemble source files with rgbasm

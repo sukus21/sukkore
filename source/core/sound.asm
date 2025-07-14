@@ -34,7 +34,7 @@ SECTION "SOUND INTERFACE", ROM0
 ; Destroys: all
 PlaySound::
     ; Find available yeller
-    ld hl, wYellerStates + YELLER_SIZE * (MAX_NUM_YELLERS - 1)
+    ld hl, wYellerStates + YELLER_SIZE * (MAX_NUM_YELLERS - 2)
     :
         ; Check if this yeller is vacant
         ld a, [hl]
@@ -51,6 +51,51 @@ PlaySound::
 
     ; Initialize yeller
     ; Set yeller flags
+    ld a, YELLER_FLAGF_IS_OCCUPIED
+    ld [hl+], a
+
+    ; Set next step delay to one, causing the first step to be taken immediately on the next
+    ; yeller tick.
+    ; ld a, 1 ; Already set, since YELLER_FLAGF_IS_OCCUPIED happens to be 1.
+    ld [hl+], a
+
+    ; Set pointer
+    ld a, c
+    ld [hl+], a
+    ld a, b
+    ld [hl+], a
+
+    ret
+
+PlayMusic::
+    ; Load music yeller address into hl
+    ld hl, wYellerStates + YELLER_SIZE * (MAX_NUM_YELLERS - 1)
+
+    ; Get music yeller flags
+    ld d, [hl]
+    
+    ; Stop audio channels used by music yeller
+    ; Probably not the best way to do this, as it may distrupt sound effects, but whatever.
+    xor a
+    bit YELLER_FLAGB_USES_CH1, d
+    jr z, :+
+        ldh [rNR12], a
+    :
+    bit YELLER_FLAGB_USES_CH2, d
+    jr z, :+
+        ldh [rNR22], a
+    :
+    bit YELLER_FLAGB_USES_CH3, d
+    jr z, :+
+        ldh [rNR30], a
+    :
+    bit YELLER_FLAGB_USES_CH4, d
+    jr z, :+
+        ldh [rNR42], a
+    :
+
+    ; (Re-)initialize yeller
+    ; Set new yeller flags
     ld a, YELLER_FLAGF_IS_OCCUPIED
     ld [hl+], a
 
@@ -103,6 +148,7 @@ YellerOpJumpTable:
         dw YellerOpInvalid
     ENDR
 
+    ASSERT (@ % $100) == 0
 WaveTable:
     INCBIN "WaveTable.bin"
 
@@ -147,7 +193,7 @@ YellerOpTerminate:
 YellerOpJump:
     ; Skip if YELLER_FLAGF_BREAK_LOOP is set
     bit YELLER_FLAGB_BREAK_LOOP, c
-    jr nz, :+
+    jr z, :+
         ; Skip step params
         ld hl, 3
         add hl, bc
@@ -258,7 +304,7 @@ YellerOpPlaySquare2:
     jp UpdateAudio.YellerStepLoop
 
 YellerOpPlayWave:
-    bit YELLER_FLAGB_USES_CH4, e
+    bit YELLER_FLAGB_USES_CH3, e
     jr z, :+
         ld hl, 3
         add hl, bc
@@ -266,7 +312,7 @@ YellerOpPlayWave:
         jp UpdateAudio.YellerStepLoop
     :
 
-    set YELLER_FLAGB_USES_CH4, d
+    set YELLER_FLAGB_USES_CH3, d
 
     ; Get wave pointer
     ld a, [bc]
@@ -345,7 +391,7 @@ YellerOpPlayNoise:
 
 YellerOpStopSquare1:
     bit YELLER_FLAGB_USES_CH1, d
-    jr nz, :+
+    jr z, :+
         xor a
         ldh [rNR12], a
         
@@ -359,7 +405,7 @@ YellerOpStopSquare1:
 
 YellerOpStopSquare2:
     bit YELLER_FLAGB_USES_CH2, d
-    jr nz, :+
+    jr z, :+
         xor a
         ldh [rNR22], a
         
@@ -373,7 +419,7 @@ YellerOpStopSquare2:
 
 YellerOpStopWave:
     bit YELLER_FLAGB_USES_CH3, d
-    jr nz, :+
+    jr z, :+
         xor a
         ldh [rNR30], a
         
@@ -387,7 +433,7 @@ YellerOpStopWave:
 
 YellerOpStopNoise:
     bit YELLER_FLAGB_USES_CH4, d
-    jr nz, :+
+    jr z, :+
         xor a
         ldh [rNR42], a
         
@@ -580,6 +626,22 @@ EpicTestSoundOne::
     db $F3
     db 214
 
+    YELLER_DELAY_OP 4
+
+    db YELLER_OPS_PLAY_SQUARE_WAVE
+    db $07
+    db $F3
+    db 14
+
+    YELLER_DELAY_OP 16
+    
+    db YELLER_OPS_TERMINATE
+
+EpicTestSoundTwo::
+    db YELLER_OPS_PLAY_NOISE_WAVE
+    db $F1
+    db $27
+
     YELLER_DELAY_OP 16
     
     db YELLER_OPS_TERMINATE
@@ -588,6 +650,10 @@ MiiChannelSong::
     INCBIN "MiiChannel.yellercode"
 SchombatSong::
     INCBIN "Schombat.yellercode"
+HisWorldSong::
+    INCBIN "HisWorld.yellercode"
+WheelOfMisfortuneSong::
+    INCBIN "WheelOfMisfortune.yellercode"
 
 ; This section contains all state related to sound playback (which isn't much).
 SECTION "SOUND STATE", wram0, align[8]
