@@ -930,6 +930,10 @@ HisWorldSong::
     INCBIN "HisWorld.yellercode"
 WheelOfMisfortuneSong::
     INCBIN "WheelOfMisfortune.yellercode"
+SocialAxhogSong::
+    INCBIN "SocialAxhog.yellercode"
+ExpiredMilkSong::
+    INCBIN "ExpiredMilk.yellercode"
 
 ; This section contains all state related to sound playback (which isn't much).
 SECTION "SOUND STATE", wram0, align[8]

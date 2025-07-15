@@ -149,7 +149,7 @@ GameloopTest::
 
         ; Get the next song ID
         inc a
-        cp a, 4
+        cp a, 6
         jr nz, :+
             xor a
         :
@@ -183,6 +183,20 @@ GameloopTest::
         dec a
         jr nz, :+
             ld bc, WheelOfMisfortuneSong
+            call PlayMusic
+            jr .MusicSelectEnd
+        :
+
+        dec a
+        jr nz, :+
+            ld bc, SocialAxhogSong
+            call PlayMusic
+            jr .MusicSelectEnd
+        :
+
+        dec a
+        jr nz, :+
+            ld bc, ExpiredMilkSong
             call PlayMusic
             jr .MusicSelectEnd
         :
@@ -404,6 +418,10 @@ GameloopTest::
 
     ; Do sound updates
     farcall UpdateAudio
+    
+    ; Get back to our own ROM bank
+    ld a, BANK(TestloopFont)
+    ld [$2000], a
 
     ; Wait for Vblank
     ld h, high(wOAM)

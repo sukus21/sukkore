@@ -151,6 +151,8 @@ def build():
     trackerboy_importer.compile_file("source/sound/music/Wheel of Misfortune.tbm", "build/sound/WheelOfMisfortune.yellercode")
     trackerboy_importer.compile_file("source/sound/music/Schombat.tbm", "build/sound/Schombat.yellercode")
     trackerboy_importer.compile_file("source/sound/music/His World.tbm", "build/sound/HisWorld.yellercode")
+    trackerboy_importer.compile_file("source/sound/music/Social Axhog.tbm", "build/sound/SocialAxhog.yellercode")
+    trackerboy_importer.compile_file("source/sound/music/Expired Milk v2.tbm", "build/sound/ExpiredMilk.yellercode")
     trackerboy_importer.output_wavetable("build/sound/WaveTable.bin")
 
     # Assemble source files with rgbasm
