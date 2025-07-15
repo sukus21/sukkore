@@ -19,6 +19,8 @@ INCLUDE "core/sound.inc"
 DEF YELLER_SIZE EQU 4
 DEF MAX_NUM_YELLERS EQU 4
 
+DEF AUDIO_ROMX_BANK EQU 2
+
 ; Contains all functions used for interfacing with the sound system from the outside.
 ; Resides in bank 0 for easy access.
 SECTION "SOUND INTERFACE", ROM0
@@ -69,10 +71,11 @@ PlaySound::
 
 PlayMusic::
     ; Load music yeller address into hl
-    ld hl, wYellerStates + YELLER_SIZE * (MAX_NUM_YELLERS - 1)
+    ld hl, wStreamingYellerState
 
     ; Get music yeller flags
-    ld d, [hl]
+    ld a, [wStreamingYellerState.flags]
+    ld d, a
     
     ; Stop audio channels used by music yeller
     ; Probably not the best way to do this, as it may distrupt sound effects, but whatever.
@@ -95,6 +98,16 @@ PlayMusic::
     :
 
     ; (Re-)initialize yeller
+    ; Set decompression state
+    ld [hl+], a
+    ld [hl+], a
+
+    ; Set pointer
+    ld a, c
+    ld [hl+], a
+    ld a, b
+    ld [hl+], a
+
     ; Set new yeller flags
     ld a, YELLER_FLAGF_IS_OCCUPIED
     ld [hl+], a
@@ -102,12 +115,6 @@ PlayMusic::
     ; Set next step delay to one, causing the first step to be taken immediately on the next
     ; yeller tick.
     ; ld a, 1 ; Already set, since YELLER_FLAGF_IS_OCCUPIED happens to be 1.
-    ld [hl+], a
-
-    ; Set pointer
-    ld a, c
-    ld [hl+], a
-    ld a, b
     ld [hl+], a
 
     ret
@@ -123,7 +130,7 @@ PlayMusic::
 ; 
 ; Resides in a switchable bank, since it is largely self-contained and is only needed during
 ; sound evaluation.
-SECTION "SOUND EVALUATION", ROMX, ALIGN[8]
+SECTION "SOUND EVALUATION", ROMX, BANK[AUDIO_ROMX_BANK], ALIGN[8]
 
 YellerOpJumpTable:
     dw YellerOpInvalid
@@ -179,6 +186,10 @@ YellerOpTerminate:
     ; Since we know this is the final step in the sequence, we can terminate the loop early.
     ; Terminator steps also aren't followed by a delay value.
 
+    ; Discard return
+    inc sp
+    inc sp
+
     ; Recover yeller iterator pointer from stack
     pop hl
 
@@ -192,14 +203,15 @@ YellerOpTerminate:
 
 YellerOpJump:
     ; Skip if YELLER_FLAGF_BREAK_LOOP is set
-    bit YELLER_FLAGB_BREAK_LOOP, c
+    bit YELLER_FLAGB_BREAK_LOOP, d
     jr z, :+
         ; Skip step params
-        ld hl, 3
-        add hl, bc
+        inc c
+        inc c
+        inc c
 
         ; Continue step loop
-        jp UpdateAudio.YellerStepLoop
+        jp PerformYellerSteps.Loop
     :
 
     ; Move bc to hl
@@ -218,98 +230,103 @@ YellerOpJump:
     ; Apply destination address
     add hl, bc
 
+    ; Move hl back into dc
+    ld b, h
+    ld c, l
+
     ; Continue step loop
-    jp UpdateAudio.YellerStepLoop
+    jp PerformYellerSteps.Loop
 
 YellerOpPlaySquare1:
     bit YELLER_FLAGB_USES_CH1, e
     jr z, :+
         ; Skip parameters
-        ld hl, 3
-        add hl, bc
+        inc c
+        inc c
+        inc c
 
-        jp UpdateAudio.YellerStepLoop
+        jp PerformYellerSteps.Loop
     :
 
     set YELLER_FLAGB_USES_CH1, d
-
-    ; Move bc to hl
-    ld h, b
-    ld l, c
 
     ; Set sweep
     xor a
     ldh [rNR10], a
 
     ; Get duty and high period bits
-    ld a, [hl+]
-    ld b, a
+    ld a, [bc]
+    inc c
+    ld h, a
     and a, $07
-    ld c, a
-    xor b
+    ld l, a
+    xor h
 
     ; Set duty
     ldh [rNR11], a
 
     ; Set envelope
-    ld a, [hl+]
+    ld a, [bc]
+    inc c
     ldh [rNR12], a
 
     ; Set frequency and trigger
-    ld a, [hl+]
+    ld a, [bc]
+    inc c
     ldh [rNR13], a
     ld a, $80
-    or c
+    or l
     ldh [rNR14], a
 
-    jp UpdateAudio.YellerStepLoop
+    jp PerformYellerSteps.Loop
 
 YellerOpPlaySquare2:
     bit YELLER_FLAGB_USES_CH2, e
     jr z, :+
         ; Skip parameters
-        ld hl, 3
-        add hl, bc
+        inc c
+        inc c
+        inc c
 
-        jp UpdateAudio.YellerStepLoop
+        jp PerformYellerSteps.Loop
     :
 
     set YELLER_FLAGB_USES_CH2, d
 
-    ; Move bc to hl
-    ld h, b
-    ld l, c
-
     ; Get duty and high period bits
-    ld a, [hl+]
-    ld b, a
+    ld a, [bc]
+    inc c
+    ld h, a
     and a, $07
-    ld c, a
-    xor b
+    ld l, a
+    xor h
 
     ; Set duty
     ldh [rNR21], a
 
     ; Set envelope
-    ld a, [hl+]
+    ld a, [bc]
+    inc c
     ldh [rNR22], a
 
     ; Set frequency and trigger
-    ld a, [hl+]
+    ld a, [bc]
+    inc c
     ldh [rNR23], a
     ld a, $80
-    or c
+    or l
     ldh [rNR24], a
     
-    jp UpdateAudio.YellerStepLoop
+    jp PerformYellerSteps.Loop
 
 YellerOpPlayWave:
     bit YELLER_FLAGB_USES_CH3, e
     jr z, :+
-        ld hl, 3
-        add hl, bc
+        inc c
+        inc c
+        inc c
 
-        jp UpdateAudio.YellerStepLoop
+        jp PerformYellerSteps.Loop
     :
 
     set YELLER_FLAGB_USES_CH3, d
@@ -319,6 +336,7 @@ YellerOpPlayWave:
     and a, $F0
     ld l, a
     ld a, [bc]
+    inc c
     xor l
     add HIGH(WaveTable)
     ld h, a
@@ -333,17 +351,14 @@ YellerOpPlayWave:
         ldh [_AUD3WAVERAM + WAVE_IT], a
     ENDR
 
-    ; Increment bc and move to hl
-    inc bc
-    ld h, b
-    ld l, c
-
     ; Set low period byte
-    ld a, [hl+]
+    ld a, [bc]
+    inc c
     ldh [rNR33], a
 
     ; Get volume and high frequency bits
-    ld a, [hl+]
+    ld a, [bc]
+    inc c
     
     ; Set volume
     ldh [rNR32], a
@@ -354,40 +369,38 @@ YellerOpPlayWave:
     ldh [rNR30], a ; We only care about the top bit of this register, which happens to be set in a.
     ldh [rNR34], a
     
-    jp UpdateAudio.YellerStepLoop
+    jp PerformYellerSteps.Loop
 
 YellerOpPlayNoise:
     bit YELLER_FLAGB_USES_CH4, e
     jr z, :+
-        ld hl, 2
-        add hl, bc
+        inc c
+        inc c
 
-        jp UpdateAudio.YellerStepLoop
+        jp PerformYellerSteps.Loop
     :
 
     set YELLER_FLAGB_USES_CH4, d
-
-    ; Move bc to hl
-    ld h, b
-    ld l, c
 
     ; Set timer
     xor a
     ldh [rNR41], a
 
     ; Set envelope
-    ld a, [hl+]
+    ld a, [bc]
+    inc c
     ldh [rNR42], a
 
     ; Set frequency and state size
-    ld a, [hl+]
+    ld a, [bc]
+    inc c
     ldh [rNR43], a
 
     ; Set trigger
     ld a, $80
     ldh [rNR44], a
     
-    jp UpdateAudio.YellerStepLoop
+    jp PerformYellerSteps.Loop
 
 YellerOpStopSquare1:
     bit YELLER_FLAGB_USES_CH1, d
@@ -397,11 +410,8 @@ YellerOpStopSquare1:
         
         res YELLER_FLAGB_USES_CH1, d
     :
-    
-    ld h, b
-    ld l, c
 
-    jp UpdateAudio.YellerStepLoop
+    jp PerformYellerSteps.Loop
 
 YellerOpStopSquare2:
     bit YELLER_FLAGB_USES_CH2, d
@@ -411,11 +421,8 @@ YellerOpStopSquare2:
         
         res YELLER_FLAGB_USES_CH2, d
     :
-    
-    ld h, b
-    ld l, c
 
-    jp UpdateAudio.YellerStepLoop
+    jp PerformYellerSteps.Loop
 
 YellerOpStopWave:
     bit YELLER_FLAGB_USES_CH3, d
@@ -425,11 +432,8 @@ YellerOpStopWave:
         
         res YELLER_FLAGB_USES_CH3, d
     :
-    
-    ld h, b
-    ld l, c
 
-    jp UpdateAudio.YellerStepLoop
+    jp PerformYellerSteps.Loop
 
 YellerOpStopNoise:
     bit YELLER_FLAGB_USES_CH4, d
@@ -439,11 +443,47 @@ YellerOpStopNoise:
         
         res YELLER_FLAGB_USES_CH4, d
     :
-    
-    ld h, b
-    ld l, c
 
-    jp UpdateAudio.YellerStepLoop
+    jp PerformYellerSteps.Loop
+
+PerformYellerSteps:
+    .Loop:
+        ; Loop variables:
+        ; - `d` contains the state flags of the yeller.
+        ; - `e` contains the union of the state flags of all higher-priority yellers.
+        ;       This lets us know what sound channels we can't use.
+        ; - `bc` contains the address of the next step.
+        ; - `a`, `h`, and `l` are undefined.
+        ; - The address of the second byte of the yeller is at the top of the stack.
+        ;       Note that all of the yeller's state is either already in registers or known implicitly.
+
+        ; Fetch step code
+        ld a, [bc]
+        inc c
+
+        ; End if this is a delay op
+        bit 0, a
+        jr nz, .EndStepLoop
+
+        ; Translate opcode to jump table pointer
+        ; Since odd numbers indicate delays, all other opcodes are even.
+        ; This is convenient since jump addresses occupy two bytes, each.
+        ASSERT LOW(YellerOpJumpTable) == 0
+        ld l, a
+        ld h, HIGH(YellerOpJumpTable)
+
+        ; Load jump pointer
+        ld a, [hl+]
+        ld h, [hl]
+        ld l, a
+
+        jp hl
+    .EndStepLoop:
+
+    ; Halve delay value
+    srl a
+
+    ret
 
 ; Initializes all memory used by the audio system.
 ; 
@@ -452,8 +492,10 @@ YellerOpStopNoise:
 ; 
 ; Destroys: all
 InitAudio::
-    ; Initialize frame counter
+    ; Set a to zero so we can write a lot of zeroes
     xor a
+
+    ; Initialize frame counter
     ld hl, wFrameCounter
     REPT 4
     ld [hl+], a
@@ -461,16 +503,22 @@ InitAudio::
 
     ; Mark all yeller states as vacant
     ; Assumes that a = 0 and hl = wYellerStates, which should be the case after initializing the frame counter.
-    REPT MAX_NUM_YELLERS - 1
+    REPT MAX_NUM_YELLERS
     ld [hl+], a
     inc l
     inc l
     inc l
     ENDR
-    ld [hl], a
+
+    ; Clear streaming yeller state
+    ld [hl+], a
+    ld [hl+], a
+    inc l
+    inc l
+    ld [hl+], a
 
     ; Turn on audio on both ears for all channels
-    ld a, $FF
+    cpl ; a is zero, so this changes it to $FF
     ldh [rNR51], a
 
     ret
@@ -497,7 +545,6 @@ UpdateAudio::
     ld e, 0
 
     ; Process all yellers
-    ; `b` is now a bitfield of used channels.
     .YellerLoopStart:
         ; Get yeller flags
         ld a, [hl+]
@@ -521,57 +568,18 @@ UpdateAudio::
         ; Save yeller flags in `d`
         ld d, a
 
-        ; Save `hl` to stack and fetch the step pointer.
+        ; Save `hl` to stack
         push hl
         inc l
+
+        ; Fetch the step pointer
         ld a, [hl+]
-        ld h, [hl]
-        ld l, a
+        ld b, [hl]
+        ld c, a
 
-        ; This is a loop, since multiple steps may take place on the same frame if they have delays of 0.
-        .YellerStepLoop:
-            ; Loop variables:
-            ; - `d` contains the state flags of the yeller.
-            ; - `e` contains the union of the state flags of all higher-priority yellers.
-            ;       This lets us know what sound channels we can't use.
-            ; - `hl` contains the address of the next step.
-            ; - `a`, `b`, and `c` are undefined.
-            ; - The address of the second byte of the yeller is at the top of the stack.
-            ;       Note that all of the yeller's state is either already in registers or known implicitly.
-
-            ; Fetch step code
-            ld a, [hl+]
-
-            ; End if this is a delay op
-            bit 0, a
-            jr nz, .EndStepLoop
-
-            ; Move hl to bc
-            ld b, h
-            ld c, l
-
-            ; Translate opcode to jump table pointer
-            ; Since odd numbers indicate delays, all other opcodes are even.
-            ; This is convenient since jump addresses occupy two bytes, each.
-            ASSERT LOW(YellerOpJumpTable) == 0
-            ld l, a
-            ld h, HIGH(YellerOpJumpTable)
-
-            ; Load jump pointer
-            ld a, [hl+]
-            ld h, [hl]
-            ld l, a
-
-            jp hl
-
-        .EndStepLoop:
-
-        ; Halve delay value
-        srl a
+        call PerformYellerSteps
 
         ; Recover yeller iterator pointer from stack
-        ld b, h
-        ld c, l
         pop hl
 
         ; Set next step delay in yeller's state
@@ -592,7 +600,7 @@ UpdateAudio::
         ld [hl+], a
         ld [hl], b
 
-        ; Terminate loop if this was the final yeller
+        ; Terminate loop if this was the final non-music yeller
         ld a, l
         cp a, LOW(wYellerStates + YELLER_SIZE * MAX_NUM_YELLERS - 1)
         jr z, .YellerLoopEnd
@@ -606,7 +614,7 @@ UpdateAudio::
 
         ld a, l
         
-        ; Terminate loop if this is the last yeller
+        ; Terminate loop if this is the last non-music yeller
         cp LOW(wYellerStates + YELLER_SIZE * MAX_NUM_YELLERS - 3)
         jr z, .YellerLoopEnd
 
@@ -617,8 +625,276 @@ UpdateAudio::
 
     .YellerLoopEnd:
 
-    ret
+    ; Update streaming yeller
 
+    ; Return immediately if streaming yeller isn't even active
+    ld a, [wStreamingYellerState.flags]
+    bit YELLER_FLAGB_IS_OCCUPIED, a
+    ret z
+
+    ; Prepare for decompression
+
+    ; Fix hl
+    ld l, LOW(wStreamingYellerState)
+    
+    ; Get decompression index and current amount of decoded data waiting to be played
+    ld a, [hl+]
+    ld c, a
+    ld a, [hl+]
+    ld d, a
+    sub c
+
+    ; Push playback index and accumulated yeller flags
+    push de
+
+    ; If we need to decompress more data, get the required amount and decompress
+    cpl
+    inc a
+    sub a, 32
+    jr nc, .DecompressionEnd
+        ld e, a
+
+        ; Set WRAM bank
+        ld a, BANK(wMusicDecompressionBuffer)
+        ld [rSVBK], a
+
+        ; Load source pointer
+        ld a, [hl+]
+        ld h, [hl]
+        ld l, a
+
+        ; Load previous copy distance
+        ld a, [wMusicDecompressionCopyDistance]
+        ld d, a
+
+        ; Perform decompression steps
+        .DecompressionLoop:
+            ; Loop variables:
+            ; - c is the current index into the ring buffer
+            ; - d is last copy distance
+            ; - e is negative of the amount of data that needs to be decoded
+            ; - hl is source pointer
+
+            ; Get first byte of next decode step tag
+            ld a, [hl+]
+
+            ; If lowest bit is set, then this is a copy operation.
+            sra a
+            jr c, .DecompressionCopy
+
+            ; Otherwise, if second lowest bit is set, this is a raw input operation.
+            sra a
+            jr c, .DecompressionReadSource
+
+            ; Otherwise, if the third last bit is set, then this is a source jump.
+            sra a
+            jr c, .DecompressionSourceJump
+
+            ; Otherwise, if all bits are zero, then this is an EOS
+            or a
+            jr c, .DecompressionEos
+
+            ; Otherwise... something's definitely wrong
+            ld hl, ErrorInvalidGameData
+            rst VecError
+
+            .DecompressionCopy:
+                ; If the next lowest bit is set, then the distance must be updated.
+                sra a
+                jr nc, :+
+                    ld b, a
+                    ld a, [hl+]
+                    ld d, a
+                    ld a, b
+                :
+                
+                ; Treat amount as unsigned by clearing the upper two bits.
+                and a, $3F
+
+                ; Apply bias to amount
+                inc a
+
+                ; Move amount into a non-accumulator register
+                ld b, a
+
+                ; Reduce amount that needs to be decoded by amount we're about to decode
+                ld a, e
+                add b
+                ld e, a
+
+                ; We won't be reading from source while copying, and we need more registers.
+                push hl
+
+                ; Turn hl into a pointer into the ring buffer.
+                ld h, HIGH(wMusicDecompressionBuffer)
+
+                ; a will store the low byte of the pointer so we can easily add and subtract.
+                ld a, c
+
+                ; Perform the actual copy
+                :
+                    ; Read copied byte
+                    sub d
+                    ld l, a
+                    ld c, [hl]
+
+                    ; Write copied byte at new location
+                    add d
+                    ld l, a
+                    ld [hl], c
+
+                    ; Advance
+                    inc a
+                    dec b
+                    jr nz, :-
+                ;
+
+                ; Move the ring buffer index back into c
+                ld c, a
+
+                ; We can now pop our source pointer back into hl.
+                pop hl
+
+                ; Continue decompressing if we still need more data.
+                ; Since we can only decode 64 bytes per step, we don't have to worry about
+                ; signed overflow, as -32 <= e <= 63 is guarranteed.
+                bit 7, e
+                jr nz, .DecompressionLoop
+                jr .DecompressionLoopEnd
+            ;
+
+            .DecompressionReadSource:
+                ; Treat amount as unsigned by clearing the upper two bits.
+                and a, $3F
+
+                ; Apply bias to amount
+                inc a
+
+                ; Move amount into a non-accumulator register
+                ld b, a
+
+                ; Reduce amount that needs to be decoded by amount we're about to decode
+                ld a, e
+                add b
+                ld e, a
+
+                ; We won't need copy distance or required amount to be decoded for a while.
+                push de
+
+                ; Create pointer into ring buffer
+                ld e, c
+                ld d, HIGH(wMusicDecompressionBuffer)
+
+                ; Perform the read operation
+                :
+                    ld a, [hl+]
+                    ld [de], a
+                    inc e
+                    dec b
+                    jr nz, :-
+                ;
+
+                ; Move the ring buffer index back into c
+                ld c, e
+
+                ; Pop copy distance and required amount to be decoded
+                pop de
+
+                ; Continue decompressing if we still need more data.
+                ; Since we can only decode 64 bytes per step, we don't have to worry about
+                ; signed overflow, as -32 <= e <= 63 is guarranteed.
+                bit 7, e
+                jr nz, .DecompressionLoop
+                jr .DecompressionLoopEnd
+            ;
+
+            .DecompressionSourceJump:
+                ; Store relative address in `bc`
+                or $E0
+                ld b, a
+                ld a, c ; Yes, we're seriously using `a` to make room in `c`.
+                ld c, [hl]
+
+                ; Apply relative address
+                add hl, bc
+                
+                ; Get the ring buffer index back from (ahem) `a`
+                ld c, a
+
+                jr .DecompressionLoop
+            ;
+
+            .DecompressionEos:
+                ; Make it so that we'll keep hitting the same EOS marker when trying again
+                dec hl
+
+                ; Exit the decompression loop without decompressing the full amount
+
+        .DecompressionLoopEnd:
+
+        ; Save copy distance
+        ld a, d
+        ld a, [wMusicDecompressionCopyDistance]
+
+        ; Move source pointer to make room in hl
+        ld d, h
+        ld e, l
+
+        ; Load streaming yeller state pointer into hl
+        ld hl, wStreamingYellerState
+
+        ; Save decompression index and source pointer
+        ld a, c
+        ld [hl+], a
+        inc hl
+        ld a, e
+        ld [hl+], a
+        ld a, d
+        ld [hl+], a
+
+    .DecompressionEnd:
+
+    ; Pop playback index and accumulated yeller flags
+    pop de
+
+    ; Move playback index into c
+    ld c, d
+
+    ; Correct hl
+    ld l, LOW(wStreamingYellerState.flags)
+
+    ; Get streaming yeller flags
+    ld a, [hl+]
+    ld d, a
+
+    ; Decrease delay
+    dec [hl]
+
+    ; If delay is non-zero, return immediately
+    ret nz
+
+    ; Set high byte of yeller code pointer
+    ld b, HIGH(wMusicDecompressionBuffer)
+
+    call PerformYellerSteps
+
+    ; Set hl back
+    ld hl, wStreamingYellerState.delay
+
+    ; Store delay
+    ld [hl-], a
+
+    ; Store flags
+    ld [hl], d
+
+    ; Store playback index
+    ld a, c
+    ld [wStreamingYellerState.playbackIndex], a
+
+    ret
+;
+
+SECTION "SOUND DATA", romx, bank[AUDIO_ROMX_BANK], align[8]
 ; Some epic test sounds
 EpicTestSoundOne::
     db YELLER_OPS_PLAY_SQUARE_WAVE
@@ -681,3 +957,34 @@ wFrameCounter::
 ; Start address must be four bytes after a 256-byte alignment.
 wYellerStates::
     ds YELLER_SIZE * MAX_NUM_YELLERS
+
+wStreamingYellerState::
+    ; The index into `wMusicDecompressionBuffer` marking the end of currently
+    ; decompressed data.
+    .decompressionIndex: ds 1
+
+    ; The index into `wMusicDecompressionBuffer` from which music is being read.
+    .playbackIndex: ds 1
+
+    .sourcePtr: ds 2
+
+    .flags: ds 1
+
+    .delay: ds 1
+
+
+; This section contains memory used internally by the sound system.
+SECTION "SOUND INTERNAL", wramx, align[8]
+
+; A 256-byte ring buffer for streamed music.
+; Written to and read from by the LZ77 decompression system.
+; Also read from by the playback mechanism.
+wMusicDecompressionBuffer:
+    ds 256
+
+
+; The distance of the last copy operation.
+; 
+; LZ copy operations can forego specifying a distance and instead use the
+; same distance as the previous copy operation, hence this variable.
+wMusicDecompressionCopyDistance: ds 1

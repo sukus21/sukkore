@@ -4,6 +4,9 @@ import math
 
 verbose = False
 
+def numToByte(x):
+    return x.to_bytes(1, byteorder="little", signed=False)
+
 class Module:
     def __init__(self, title, author, copyright):
         self.title = title
@@ -33,6 +36,7 @@ class Song:
         self.sections = []
 
         self.module = None
+        self.loop_point = None
     
     def add_pattern(self, channel, pattern_id, pattern):
         if verbose:
@@ -96,11 +100,12 @@ class Song:
                         curr_channel = pattern_i
                 if curr_channel == None:
                     break
+                assert curr_event != None
                 patterns_progress[curr_channel] += 1
 
                 pattern = patterns[curr_channel]
 
-                if curr_event.get_size(curr_channel) != 0:
+                if curr_event.get_size(curr_channel) != 0 or (type(curr_event) is JumpEvent):
                     event_frame = math.floor(fpr * (curr_event.time + section_row_offset))
                     event_delay = event_frame - last_event_frame
                     last_event_frame = event_frame
@@ -229,7 +234,7 @@ class NoteEvent(Event):
             envelope_byte = emit_state["effect_state"]["envelope"].to_bytes(1, byteorder="little")
 
             freq_state_val = ((freq_exponent << 4) + (emit_state["effect_state"]["duty"] << 3) + freq_div)
-            freq_state_byte = freq_state_val.to_bytes(1, byteorder="little", signed=False)
+            freq_state_byte = numToByte(freq_state_val)
 
             return b"\x0E" + envelope_byte + freq_state_byte
     
@@ -256,36 +261,14 @@ class JumpEvent(Event):
     def emit(self, emit_state):
         song = emit_state["song"]
 
-        offset = -emit_state["next_byte_index"] - 4
-        # for section in song.sections[:self.section]:
-        #     for channel_i in range(4):
-        #         pattern = song.patterns[channel_i][section[channel_i]]
-        #         if pattern == None:
-        #             continue
-        #         for pattern_event in pattern.events:
-        #             offset -= pattern_event.get_size(channel_i)
-        offset += emit_state["section_starts"][self.section]
-        
-        offset_bytes = offset.to_bytes(2, byteorder="little", signed=True)
+        loop_point = emit_state["section_starts"][self.section]
 
-        print(offset)
+        song.loop_point = loop_point
 
-        # TODO: Calculate delay properly. Note that destination may begin with a delay operation.
-        # delay = 99999
-        # for channel_i in range(4):
-        #     pattern = song.patterns[channel_i][song.sections[self.section - 1][channel_i]]
-        #     if pattern == None:
-        #         continue
-        #     pattern_end_time = pattern.events[0].time
-        #     if pattern_start_time < delay:
-        #         delay = pattern_start_time
-        delay = 0
-        delay_byte = delay.to_bytes(1, byteorder="little")
-
-        return b"\x04" + offset_bytes + delay_byte
+        return b""
 
     def get_size(self, channel):
-        return 4
+        return 0
 
 class ParameterEvent(Event):
     def __init__(self, time, parameter, value):
@@ -311,6 +294,133 @@ def read_int(in_stream, num_bytes):
     in_bytes = in_stream.read(num_bytes)
     return int.from_bytes(in_bytes, byteorder="little", signed=False)
 
+def compress(raw, loop_point):
+    out = b""
+
+    compressed_loop_point = None
+    if loop_point == 0:
+        compressed_loop_point = 0
+
+    last_encoded = 0
+    i = 4
+    while i < loop_point - 4:
+        search_start = max(i - 255, 0)
+        match_cap = min(64, loop_point - i)
+
+        longest_match_index = None
+        longest_match_len = 3
+        while longest_match_len < match_cap:
+            new_match_index = raw.find(raw[i:i + longest_match_len + 1], search_start, i - 1)
+            if new_match_index == -1:
+                break
+            longest_match_index = new_match_index
+
+            new_match_len = longest_match_len + 1
+            for check_i in range(longest_match_len + 1, match_cap):
+                if raw[i + check_i] != raw[new_match_index + check_i]:
+                    new_match_len = check_i
+                    break
+
+            longest_match_len = new_match_len
+        
+        if longest_match_index != None:
+            if i != last_encoded:
+                raw_len_code = ((i - last_encoded - 1) << 2) | 2
+                out += numToByte(raw_len_code) + raw[last_encoded:i]
+
+            match_dist = i - longest_match_index
+            len_code = ((longest_match_len - 1) << 2) | 3
+            out += numToByte(len_code) + numToByte(match_dist)
+
+            i += longest_match_len
+            last_encoded = i
+        else:
+            if i - last_encoded == 64:
+                out += numToByte(0xFE) + raw[last_encoded:i]
+                last_encoded = i
+            i += 1
+    
+    if last_encoded != loop_point:
+        raw_len_code = ((loop_point - last_encoded - 1) << 2) | 2
+        out += numToByte(raw_len_code) + raw[last_encoded:loop_point]
+    
+    compressed_loop_point = len(out)
+
+    last_encoded = loop_point
+    i = loop_point + 4
+    while i < len(raw) - 4:
+        search_start = max(i - 255, loop_point)
+        match_cap = min(64, len(raw) - i)
+
+        longest_match_index = None
+        longest_match_len = 3
+        while longest_match_len < match_cap:
+            new_match_index = raw.find(raw[i:i + longest_match_len + 1], search_start, i - 1)
+            if new_match_index == -1:
+                break
+            longest_match_index = new_match_index
+
+            new_match_len = longest_match_len + 1
+            for check_i in range(longest_match_len + 1, match_cap):
+                if raw[i + check_i] != raw[new_match_index + check_i]:
+                    new_match_len = check_i
+                    break
+            
+            longest_match_len = new_match_len
+        
+        if longest_match_index != None:
+            if i != last_encoded:
+                raw_len_code = ((i - last_encoded - 1) << 2) | 2
+                out += numToByte(raw_len_code) + raw[last_encoded:i]
+
+            match_dist = i - longest_match_index
+            assert raw[i:i + longest_match_len] == raw[longest_match_index:longest_match_index + longest_match_len]
+            len_code = ((longest_match_len - 1) << 2) | 3
+            out += numToByte(len_code) + numToByte(match_dist)
+
+            i += longest_match_len
+            last_encoded = i
+        else:
+            if i - last_encoded == 64:
+                out += numToByte(0xFE) + raw[last_encoded:i]
+                last_encoded = i
+            i += 1
+    
+    if last_encoded != len(raw):
+        raw_len_code = ((len(raw) - last_encoded - 1) << 2) | 2
+        out += numToByte(raw_len_code) + raw[last_encoded:len(raw)]
+
+    # i = 0
+    # while i < len(raw):
+    #     load_amount = 64
+    # 
+    #     crossing_loop_point = (i < loop_point and (i + load_amount) >= loop_point)
+    #     if crossing_loop_point:
+    #         load_amount = loop_point - i
+    #     
+    #     if i + load_amount > len(raw):
+    #         load_amount = len(raw) - i
+    #     
+    #     load_code = 0x02 | ((load_amount - 1) << 2)
+    #     load_byte = numToByte(load_code)
+    # 
+    #     out += load_byte + raw[i:i + load_amount]
+    # 
+    #     if crossing_loop_point:
+    #         compressed_loop_point = len(out)
+    #     
+    #     i += load_amount
+
+    if compressed_loop_point != None:
+        loop_dist = compressed_loop_point - (len(out) + 1)
+        print(f"Loop dist: {loop_dist}")
+
+        loop_code_hi = ((loop_dist >> 5) & 0xF8) | 0x04
+        loop_code_lo = loop_dist & 0xFF
+
+        out += numToByte(loop_code_hi) + numToByte(loop_code_lo)
+
+    return out
 
 class TrackerboyCompiler:
     def __init__(self):
@@ -435,10 +545,13 @@ class TrackerboyCompiler:
     def compile_file(self, infile, outfile):
         instream = open(infile, "rb")
         module = self.load_module(instream)
+
         compiled = module.songs[0].emit_yeller_code()
+        compressed = compress(compiled, module.songs[0].loop_point)
+        
         os.makedirs(os.path.dirname(outfile), exist_ok=True)
         outstream = open(outfile, 'w+b')
-        outstream.write(compiled)
+        outstream.write(compressed)
 
     def output_wavetable(self, outfile):
         outstream = open(outfile, 'w+b')
