@@ -479,7 +479,7 @@ YellerOpPlayWave:
     
     ; Turn on DAC and trigger
     ; Assume that the top bit of a is set
-    and $87
+    and a, $87
     ldh [rNR30], a ; We only care about the top bit of this register, which happens to be set in a.
     ldh [rNR34], a
     
@@ -730,7 +730,7 @@ UpdateAudio::
         ld a, [hl+]
 
         ; If yeller is vacant, then skip
-        or a
+        or a, a
         jp z, .YellerLoopCondEarly
 
         ; Decrease next step delay
@@ -739,7 +739,7 @@ UpdateAudio::
         ; If delay is non-zero, then proceed to the next yeller
         jr z, :+
             ; Update used channels bitfield
-            or e
+            or a, e
             ld e, a
 
             jr .YellerLoopCondEarly
@@ -780,7 +780,7 @@ UpdateAudio::
 
         ; Terminate loop if this was the final non-music yeller
         ld a, l
-        cp a, LOW(wYellerStates + YELLER_SIZE * MAX_NUM_YELLERS - 1)
+        cp a, low(wYellerStates.end - 1)
         jr z, .YellerLoopEnd
 
         ; Continue loop
@@ -790,11 +790,10 @@ UpdateAudio::
 
     .YellerLoopCondEarly:
         ; There are probably more efficient places to put this. May optimize later.
-
-        ld a, l
         
         ; Terminate loop if this is the last non-music yeller
-        cp LOW(wYellerStates + YELLER_SIZE * MAX_NUM_YELLERS - 3)
+        ld a, l
+        cp a, low(wYellerStates.end - 3)
         jr z, .YellerLoopEnd
 
         ; Otherwise, update the pointer and process the next yeller
@@ -822,7 +821,7 @@ UpdateAudio::
     ld c, a
     ld a, [hl+]
     ld d, a
-    sub c
+    sub a, c
 
     ; Push accumulated yeller flags
     push de
@@ -871,7 +870,7 @@ UpdateAudio::
             jr c, .DecompressionSourceJump
 
             ; Otherwise, if all bits are zero, then this is an EOS
-            or a
+            or a, a
             jr c, .DecompressionEos
 
             ; Otherwise... something's definitely wrong
@@ -899,7 +898,7 @@ UpdateAudio::
 
                 ; Reduce amount that needs to be decoded by amount we're about to decode
                 ld a, e
-                add b
+                add a, b
                 ld e, a
 
                 ; We won't be reading from source while copying, and we need more registers.
@@ -914,12 +913,12 @@ UpdateAudio::
                 ; Perform the actual copy
                 :
                     ; Read copied byte
-                    sub d
+                    sub a, d
                     ld l, a
                     ld c, [hl]
 
                     ; Write copied byte at new location
-                    add d
+                    add a, d
                     ld l, a
                     ld [hl], c
 
@@ -1009,7 +1008,6 @@ UpdateAudio::
                 dec hl
 
                 ; Exit the decompression loop without decompressing the full amount
-
             ;
         .DecompressionLoopEnd:
 
@@ -1106,18 +1104,14 @@ EpicTestSoundTwo::
 
 
 
-MiiChannelSong::
-    INCBIN "MiiChannel.yellercode"
-SchombatSong::
-    INCBIN "Schombat.yellercode"
-HisWorldSong::
-    INCBIN "HisWorld.yellercode"
-WheelOfMisfortuneSong::
-    INCBIN "WheelOfMisfortune.yellercode"
-SocialAxhogSong::
-    INCBIN "SocialAxhog.yellercode"
-ExpiredMilkSong::
-    INCBIN "ExpiredMilk.yellercode"
+MiiChannelSong:: INCBIN "MiiChannel.yellercode"
+SchombatSong:: INCBIN "Schombat.yellercode"
+HisWorldSong:: INCBIN "HisWorld.yellercode"
+WheelOfMisfortuneSong:: INCBIN "WheelOfMisfortune.yellercode"
+SocialAxhogSong:: INCBIN "SocialAxhog.yellercode"
+ExpiredMilkSong:: INCBIN "ExpiredMilk.yellercode"
+
+
 
 ; This section contains all state related to sound playback (which isn't much).
 SECTION "SOUND STATE", WRAM0, ALIGN[8]
