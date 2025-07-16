@@ -127,6 +127,11 @@ PlayMusic::
     ; ld a, 1 ; Already set, since YELLER_FLAGF_IS_OCCUPIED happens to be 1.
     ld [hl+], a
 
+    ; Reset compression distance
+    xor a
+    ld [hl+], a
+
+    ; And we done
     ret
 
 ; This section contains everything sound-related, including both the sound effects and the
@@ -678,7 +683,7 @@ UpdateAudio::
         ld l, a
 
         ; Load previous copy distance
-        ld a, [wMusicDecompressionCopyDistance]
+        ld a, [wStreamingYellerState.lastCopyDistance]
         ld d, a
 
         ; Perform decompression steps
@@ -848,7 +853,7 @@ UpdateAudio::
 
         ; Save copy distance
         ld a, d
-        ld a, [wMusicDecompressionCopyDistance]
+        ld [wStreamingYellerState.lastCopyDistance], a
 
         ; Move source pointer to make room in hl
         ld d, h
@@ -990,6 +995,14 @@ wStreamingYellerState::
 
     .delay: ds 1
 
+    ; The distance of the last copy operation.
+    ; 
+    ; LZ copy operations can forego specifying a distance and instead use the
+    ; same distance as the previous copy operation, hence this variable.
+    .lastCopyDistance: ds 1
+;
+
+
 
 ; This section contains memory used internally by the sound system.
 SECTION "SOUND INTERNAL", wramx, align[8]
@@ -997,12 +1010,4 @@ SECTION "SOUND INTERNAL", wramx, align[8]
 ; A 256-byte ring buffer for streamed music.
 ; Written to and read from by the LZ77 decompression system.
 ; Also read from by the playback mechanism.
-wMusicDecompressionBuffer:
-    ds 256
-
-
-; The distance of the last copy operation.
-; 
-; LZ copy operations can forego specifying a distance and instead use the
-; same distance as the previous copy operation, hence this variable.
-wMusicDecompressionCopyDistance: ds 1
+wMusicDecompressionBuffer: ds 256
