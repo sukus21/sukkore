@@ -451,8 +451,8 @@ YellerOpPlayWave:
     ld l, a
     ld a, [bc]
     inc c
-    xor l
-    add HIGH(WaveTable)
+    and a, $0F
+    add a, HIGH(WaveTable)
     ld h, a
 
     ; Turn off DAC while loading
@@ -1102,6 +1102,9 @@ EpicTestSoundTwo::
     YELLER_DELAY_OP 16
     
     db YELLER_OPS_TERMINATE
+;
+
+
 
 MiiChannelSong::
     INCBIN "MiiChannel.yellercode"
