@@ -1,15 +1,19 @@
 ; MECHANISM:
 ;   Four yellers are available. Each yeller can be allocated and set to play a sound effect.
 ;   Each yeller stores the address of a step within a sequence. Each step is like an instruction
-;   for the audio engine, which either orders a specific sound from a specific channel or ends
-;   the sound, vacating the yeller. The yeller also stores a bitfield of the channels that it
+;   for the audio engine, which may order a specific sound from a specific channel, delay the execution
+;   of further steps, cause the sound to loop, or end the sound, vacating the yeller. The yeller also
+;   stores a bitfield of the channels that it
 ;   uses, as well as the time at which it began playing the sound.
 ;   
-;   As an optimization, all times are stored modulo 256, which simplifies comparisons. The only
-;   consequence of this is that delays of more than 255 frames between two consecutive steps can
-;   not be handled correctly. However, we expect these long delays to be rare in practice, and
-;   even if they do appear, the delay can simply be extended with a no-op step. Notably, since
-;   steps are evaluated sequentially, any delay below 256 is still valid.
+;   There is also a fifth yeller, which is specialized in music. Although it executes (mostly) the same
+;   code as the other yellers, it is otherwise build very differently; Unlike the other yellers, which
+;   read the sound data directly from ROM, the fifth yeller uses a streaming decompressor.
+;
+;   The streaming decompressor uses a LZ scheme with a window size of 256 bytes and a maximum copy length of
+;   64 bytes. It is configured to guarantee that at least 32 bytes of music data are ready for playback
+;   right before evaluation.
+;   The window size of 256 bytes, while small, is enough to provide a significant compression ratio.
 ;   
 
 INCLUDE "hardware.inc/hardware.inc"
@@ -69,6 +73,12 @@ PlaySound::
 
     ret
 
+; Resets the music yeller and sets it to play the requested music.
+; 
+; Input:
+;   - `bc`: Address of music data. Expected to be in the same ROM bank as the sound playback engine.
+; 
+; Destroys: all
 PlayMusic::
     ; Load music yeller address into hl
     ld hl, wStreamingYellerState
@@ -158,6 +168,10 @@ YellerOpJumpTable:
     ASSERT (@ % $100) == 0
 WaveTable:
     INCBIN "WaveTable.bin"
+
+; NOTE: Because the streaming yeller uses a 256-byte ring buffer to store decompressed music data,
+; we need pointer increments to only apply to the lower 8 bits. Therefore, we can not use reads with
+; post-increment to read the yeller steps.
 
 YellerOpInvalid:
     ld hl, ErrorInvalidYellerOpcode
