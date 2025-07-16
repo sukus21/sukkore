@@ -156,14 +156,23 @@ PlayMusic::
 ; sound evaluation.
 SECTION "SOUND EVALUATION", ROMX, BANK[AUDIO_ROMX_BANK], ALIGN[8]
 
+
+; Jump table for yeller instructions.
+; All functions in this table have the following signature:
+;
+; Input:
+; - `bc`: Yellercode instruction pointer
+; - `d`: Yeller state flags
+; - `e`: Yeller state flags of higher priority yellers
+;
+; Returns:
+; - `bc`: Yellercode instruction pointer
 YellerOpJumpTable:
     dw YellerOpInvalid
     dw YellerOpTerminate
     dw YellerOpJump
-    
-    REPT 1
-        dw YellerOpInvalid
-    ENDR
+
+    dw YellerOpInvalid
 
     dw YellerOpPlaySquare1
     dw YellerOpPlaySquare2
@@ -178,19 +187,49 @@ YellerOpJumpTable:
     REPT ($100 - (@ - YellerOpJumpTable)) / 2
         dw YellerOpInvalid
     ENDR
+;
 
-    ASSERT (@ % $100) == 0
+
+
+; Contain the different waves used for the wave channel, all in one place.
 WaveTable:
+    ASSERT low(@) == 0
     INCBIN "WaveTable.bin"
+;
+
+
 
 ; NOTE: Because the streaming yeller uses a 256-byte ring buffer to store decompressed music data,
 ; we need pointer increments to only apply to the lower 8 bits. Therefore, we can not use reads with
 ; post-increment to read the yeller steps.
 
+
+
+; Lives in ROM0.
+;
+; Input:
+; - `bc`: Yellercode instruction pointer
+; - `d`: Yeller state flags
+; - `e`: Yeller state flags of higher priority yellers
+;
+; Returns:
+; - `bc`: Yellercode instruction pointer
 YellerOpInvalid:
     ld hl, ErrorInvalidYellerOpcode
     rst VecError
+;
 
+
+
+; Lives in ROM0.
+;
+; Input:
+; - `bc`: Yellercode instruction pointer
+; - `d`: Yeller state flags
+; - `e`: Yeller state flags of higher priority yellers
+;
+; Returns:
+; - `bc`: Yellercode instruction pointer
 YellerOpTerminate:
     ; Stop all audio channels used by this yeller
     xor a
@@ -228,7 +267,19 @@ YellerOpTerminate:
 
     ; Jump straight to the check of the yeller loop, skipping right past the usual yeller state update.
     jp UpdateAudio.YellerLoopCondEarly
+;
 
+
+
+; Lives in ROM0.
+;
+; Input:
+; - `bc`: Yellercode instruction pointer
+; - `d`: Yeller state flags
+; - `e`: Yeller state flags of higher priority yellers
+;
+; Returns:
+; - `bc`: Yellercode instruction pointer
 YellerOpJump:
     ; Skip if YELLER_FLAGF_BREAK_LOOP is set
     bit YELLER_FLAGB_BREAK_LOOP, d
@@ -239,7 +290,7 @@ YellerOpJump:
         inc c
 
         ; Continue step loop
-        jp PerformYellerSteps.Loop
+        jp PerformYellerSteps
     :
 
     ; Move bc to hl
@@ -263,8 +314,20 @@ YellerOpJump:
     ld c, l
 
     ; Continue step loop
-    jp PerformYellerSteps.Loop
+    jp PerformYellerSteps
+;
 
+
+
+; Lives in ROM0.
+;
+; Input:
+; - `bc`: Yellercode instruction pointer
+; - `d`: Yeller state flags
+; - `e`: Yeller state flags of higher priority yellers
+;
+; Returns:
+; - `bc`: Yellercode instruction pointer
 YellerOpPlaySquare1:
     bit YELLER_FLAGB_USES_CH1, e
     jr z, :+
@@ -273,7 +336,7 @@ YellerOpPlaySquare1:
         inc c
         inc c
 
-        jp PerformYellerSteps.Loop
+        jp PerformYellerSteps
     :
 
     set YELLER_FLAGB_USES_CH1, d
@@ -306,8 +369,20 @@ YellerOpPlaySquare1:
     or l
     ldh [rNR14], a
 
-    jp PerformYellerSteps.Loop
+    jp PerformYellerSteps
+;
 
+
+
+; Lives in ROM0.
+;
+; Input:
+; - `bc`: Yellercode instruction pointer
+; - `d`: Yeller state flags
+; - `e`: Yeller state flags of higher priority yellers
+;
+; Returns:
+; - `bc`: Yellercode instruction pointer
 YellerOpPlaySquare2:
     bit YELLER_FLAGB_USES_CH2, e
     jr z, :+
@@ -316,7 +391,7 @@ YellerOpPlaySquare2:
         inc c
         inc c
 
-        jp PerformYellerSteps.Loop
+        jp PerformYellerSteps
     :
 
     set YELLER_FLAGB_USES_CH2, d
@@ -345,16 +420,27 @@ YellerOpPlaySquare2:
     or l
     ldh [rNR24], a
     
-    jp PerformYellerSteps.Loop
+    jp PerformYellerSteps
+;
 
+
+
+; Lives in ROM0.
+;
+; Input:
+; - `bc`: Yellercode instruction pointer
+; - `d`: Yeller state flags
+; - `e`: Yeller state flags of higher priority yellers
+;
+; Returns:
+; - `bc`: Yellercode instruction pointer
 YellerOpPlayWave:
     bit YELLER_FLAGB_USES_CH3, e
     jr z, :+
         inc c
         inc c
         inc c
-
-        jp PerformYellerSteps.Loop
+        jp PerformYellerSteps
     :
 
     set YELLER_FLAGB_USES_CH3, d
@@ -397,15 +483,27 @@ YellerOpPlayWave:
     ldh [rNR30], a ; We only care about the top bit of this register, which happens to be set in a.
     ldh [rNR34], a
     
-    jp PerformYellerSteps.Loop
+    jr PerformYellerSteps
+;
 
+
+
+; Lives in ROM0.
+;
+; Input:
+; - `bc`: Yellercode instruction pointer
+; - `d`: Yeller state flags
+; - `e`: Yeller state flags of higher priority yellers
+;
+; Returns:
+; - `bc`: Yellercode instruction pointer
 YellerOpPlayNoise:
     bit YELLER_FLAGB_USES_CH4, e
     jr z, :+
         inc c
         inc c
 
-        jp PerformYellerSteps.Loop
+        jr PerformYellerSteps
     :
 
     set YELLER_FLAGB_USES_CH4, d
@@ -428,8 +526,20 @@ YellerOpPlayNoise:
     ld a, $80
     ldh [rNR44], a
     
-    jp PerformYellerSteps.Loop
+    jr PerformYellerSteps
+;
 
+
+
+; Lives in ROM0.
+;
+; Input:
+; - `bc`: Yellercode instruction pointer
+; - `d`: Yeller state flags
+; - `e`: Yeller state flags of higher priority yellers
+;
+; Returns:
+; - `bc`: Yellercode instruction pointer
 YellerOpStopSquare1:
     bit YELLER_FLAGB_USES_CH1, d
     jr z, :+
@@ -439,8 +549,21 @@ YellerOpStopSquare1:
         res YELLER_FLAGB_USES_CH1, d
     :
 
-    jp PerformYellerSteps.Loop
 
+    jr PerformYellerSteps
+;
+
+
+
+; Lives in ROM0.
+;
+; Input:
+; - `bc`: Yellercode instruction pointer
+; - `d`: Yeller state flags
+; - `e`: Yeller state flags of higher priority yellers
+;
+; Returns:
+; - `bc`: Yellercode instruction pointer
 YellerOpStopSquare2:
     bit YELLER_FLAGB_USES_CH2, d
     jr z, :+
@@ -450,8 +573,20 @@ YellerOpStopSquare2:
         res YELLER_FLAGB_USES_CH2, d
     :
 
-    jp PerformYellerSteps.Loop
+    jr PerformYellerSteps
+;
 
+
+
+; Lives in ROM0.
+;
+; Input:
+; - `bc`: Yellercode instruction pointer
+; - `d`: Yeller state flags
+; - `e`: Yeller state flags of higher priority yellers
+;
+; Returns:
+; - `bc`: Yellercode instruction pointer
 YellerOpStopWave:
     bit YELLER_FLAGB_USES_CH3, d
     jr z, :+
@@ -461,8 +596,20 @@ YellerOpStopWave:
         res YELLER_FLAGB_USES_CH3, d
     :
 
-    jp PerformYellerSteps.Loop
+    jr PerformYellerSteps
+;
 
+
+
+; Lives in ROM0.
+;
+; Input:
+; - `bc`: Yellercode instruction pointer
+; - `d`: Yeller state flags
+; - `e`: Yeller state flags of higher priority yellers
+;
+; Returns:
+; - `bc`: Yellercode instruction pointer
 YellerOpStopNoise:
     bit YELLER_FLAGB_USES_CH4, d
     jr z, :+
@@ -472,26 +619,28 @@ YellerOpStopNoise:
         res YELLER_FLAGB_USES_CH4, d
     :
 
-    jp PerformYellerSteps.Loop
+    jr PerformYellerSteps
+;
 
+
+
+; Lives in ROM0.
+;
+; Input:
+; - `bc`: Address of the next step
+; - `d`: Yeller state flags
+; - `e`: Yeller state flags of higher priority yellers
+;
+; Returns:
+; - `a`: Delay before next instruction
 PerformYellerSteps:
-    .Loop:
-        ; Loop variables:
-        ; - `d` contains the state flags of the yeller.
-        ; - `e` contains the union of the state flags of all higher-priority yellers.
-        ;       This lets us know what sound channels we can't use.
-        ; - `bc` contains the address of the next step.
-        ; - `a`, `h`, and `l` are undefined.
-        ; - The address of the second byte of the yeller is at the top of the stack.
-        ;       Note that all of the yeller's state is either already in registers or known implicitly.
+    ; Fetch step code
+    ld a, [bc]
+    inc c
 
-        ; Fetch step code
-        ld a, [bc]
-        inc c
-
-        ; End if this is a delay op
-        bit 0, a
-        jr nz, .EndStepLoop
+    ; End if this is a delay op
+    bit 0, a
+    jr nz, .EndStepLoop
 
         ; Translate opcode to jump table pointer
         ; Since odd numbers indicate delays, all other opcodes are even.
@@ -512,6 +661,7 @@ PerformYellerSteps:
     srl a
 
     ret
+;
 
 ; Initializes all memory used by the audio system.
 ; 
