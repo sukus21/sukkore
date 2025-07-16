@@ -542,13 +542,11 @@ YellerOpPlayNoise:
 ; - `bc`: Yellercode instruction pointer
 YellerOpStopSquare1:
     bit YELLER_FLAGB_USES_CH1, d
-    jr z, :+
-        xor a
-        ldh [rNR12], a
-        
-        res YELLER_FLAGB_USES_CH1, d
-    :
+    jr z, PerformYellerSteps
 
+    xor a
+    ldh [rNR12], a
+    res YELLER_FLAGB_USES_CH1, d
 
     jr PerformYellerSteps
 ;
@@ -566,12 +564,11 @@ YellerOpStopSquare1:
 ; - `bc`: Yellercode instruction pointer
 YellerOpStopSquare2:
     bit YELLER_FLAGB_USES_CH2, d
-    jr z, :+
-        xor a
-        ldh [rNR22], a
-        
-        res YELLER_FLAGB_USES_CH2, d
-    :
+    jr z, PerformYellerSteps
+
+    xor a
+    ldh [rNR22], a
+    res YELLER_FLAGB_USES_CH2, d
 
     jr PerformYellerSteps
 ;
@@ -589,12 +586,11 @@ YellerOpStopSquare2:
 ; - `bc`: Yellercode instruction pointer
 YellerOpStopWave:
     bit YELLER_FLAGB_USES_CH3, d
-    jr z, :+
-        xor a
-        ldh [rNR30], a
-        
-        res YELLER_FLAGB_USES_CH3, d
-    :
+    jr z, PerformYellerSteps
+
+    xor a
+    ldh [rNR30], a
+    res YELLER_FLAGB_USES_CH3, d
 
     jr PerformYellerSteps
 ;
@@ -612,12 +608,11 @@ YellerOpStopWave:
 ; - `bc`: Yellercode instruction pointer
 YellerOpStopNoise:
     bit YELLER_FLAGB_USES_CH4, d
-    jr z, :+
-        xor a
-        ldh [rNR42], a
-        
-        res YELLER_FLAGB_USES_CH4, d
-    :
+    jr z, PerformYellerSteps
+
+    xor a
+    ldh [rNR42], a
+    res YELLER_FLAGB_USES_CH4, d
 
     jr PerformYellerSteps
 ;
