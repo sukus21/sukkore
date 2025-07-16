@@ -658,7 +658,10 @@ PerformYellerSteps:
     ret
 ;
 
-; Initializes all memory used by the audio system.
+
+
+; Initializes all memory used by the audio system.  
+; Lives in ROM0.
 ; 
 ; I don't know best practice for where to put this, so I'm putting it in a function for now.
 ; I'll let Sukus decide a more permanent location for this procedure. -tecanec
@@ -676,6 +679,7 @@ InitAudio::
 
     ; Mark all yeller states as vacant
     ; Assumes that a = 0 and hl = wYellerStates, which should be the case after initializing the frame counter.
+    ld hl, wYellerStates
     REPT MAX_NUM_YELLERS
     ld [hl+], a
     inc l
@@ -684,6 +688,7 @@ InitAudio::
     ENDR
 
     ; Clear streaming yeller state
+    ld hl, wStreamingYellerState
     ld [hl+], a
     ld [hl+], a
     inc l
@@ -695,29 +700,31 @@ InitAudio::
     ldh [rNR51], a
 
     ret
+;
+
+
 
 ; Performs all audio processing for one frame.
+; Should be called once per frame from the game loop.  
+; Switches WRAMX banks.
 ; 
-; Should be called once per frame from the game loop.
 ; 
 ; Destroys: all
 UpdateAudio::
     ; Update frame counter. (This can also be moved to a different place if we want to globalize the frame counter.)
-    ld b, 0 ; We're doing three carry additions with 0, so using a register over an immediate saves one cycle. 
     ld hl, wFrameCounter
-    ld a, [hl]
-    add a, 1
-    ld [hl+], a
-    REPT 3
-    ld a, [hl]
-    adc a, b
-    ld [hl+], a
+    REPT 4
+        inc [hl]
+        jr nz, :+
+        inc hl
     ENDR
+    :
 
     ; Clear register e, which will be used to keep track of used channels.
     ld e, 0
 
     ; Process all yellers
+    ld hl, wYellerStates
     .YellerLoopStart:
         ; Get yeller flags
         ld a, [hl+]
@@ -735,13 +742,13 @@ UpdateAudio::
             or e
             ld e, a
 
-            jp .YellerLoopCondEarly
+            jr .YellerLoopCondEarly
         :
 
         ; Save yeller flags in `d`
         ld d, a
 
-        ; Save `hl` to stack
+        ; Save yeller pointer to stack
         push hl
         inc l
 
@@ -749,7 +756,6 @@ UpdateAudio::
         ld a, [hl+]
         ld b, [hl]
         ld c, a
-
         call PerformYellerSteps
 
         ; Recover yeller iterator pointer from stack
@@ -758,14 +764,13 @@ UpdateAudio::
         ; Set next step delay in yeller's state
         ld [hl-], a
 
-        ; Update used channels bitfield
-        ld a, e
-        or d
-        ld e, a
-
         ; Update yeller flags
         ld a, d
         ld [hl+], a
+
+        ; Update used channels bitfield
+        or a, e
+        ld e, a
 
         ; Update yeller's step pointer
         inc l
@@ -781,6 +786,7 @@ UpdateAudio::
         ; Continue loop
         inc l
         jp .YellerLoopStart
+    ;
 
     .YellerLoopCondEarly:
         ; There are probably more efficient places to put this. May optimize later.
@@ -795,6 +801,7 @@ UpdateAudio::
         add a, 3
         ld l, a
         jp .YellerLoopStart
+    ;
 
     .YellerLoopEnd:
 
@@ -817,7 +824,7 @@ UpdateAudio::
     ld d, a
     sub c
 
-    ; Push playback index and accumulated yeller flags
+    ; Push accumulated yeller flags
     push de
 
     ; If we need to decompress more data, get the required amount and decompress
@@ -829,7 +836,7 @@ UpdateAudio::
 
         ; Set WRAM bank
         ld a, BANK(wMusicDecompressionBuffer)
-        ld [rSVBK], a
+        ldh [rSVBK], a
 
         ; Load source pointer
         ld a, [hl+]
@@ -1003,6 +1010,7 @@ UpdateAudio::
 
                 ; Exit the decompression loop without decompressing the full amount
 
+            ;
         .DecompressionLoopEnd:
 
         ; Save copy distance
@@ -1024,7 +1032,6 @@ UpdateAudio::
         ld [hl+], a
         ld a, d
         ld [hl+], a
-
     .DecompressionEnd:
 
     ; Pop playback index and accumulated yeller flags
@@ -1067,7 +1074,7 @@ UpdateAudio::
     ret
 ;
 
-SECTION "SOUND DATA", romx, bank[AUDIO_ROMX_BANK], align[8]
+SECTION "SOUND DATA", ROMX, BANK[AUDIO_ROMX_BANK], ALIGN[8]
 ; Some epic test sounds
 EpicTestSoundOne::
     db YELLER_OPS_PLAY_SQUARE_WAVE
@@ -1085,6 +1092,7 @@ EpicTestSoundOne::
     YELLER_DELAY_OP 16
     
     db YELLER_OPS_TERMINATE
+;
 
 EpicTestSoundTwo::
     db YELLER_OPS_PLAY_NOISE_WAVE
@@ -1109,32 +1117,24 @@ ExpiredMilkSong::
     INCBIN "ExpiredMilk.yellercode"
 
 ; This section contains all state related to sound playback (which isn't much).
-SECTION "SOUND STATE", wram0, align[8]
+SECTION "SOUND STATE", WRAM0, ALIGN[8]
 
 ; Frame counter
 ; 
 ; Sound system only uses lowest byte, but we might also start using this elsewhere,
 ; so may as well have a full-sized frame counter.
-wFrameCounter::
-    ds 4
+wFrameCounter:: ds 4
 
-; Structure of yellers:
-; - Flags:              1 byte
-; - Next step delay:    1 byte
-; - Step pointer:       2 bytes
-; 
-; The flags are:
-; - bit 0: Clear if vacant.
-; - bits 1-3: Unused
-; - bit 4: Set if yeller uses the first square wave channel
-; - bit 5: Set if yeller uses the second square wave channel
-; - bit 6: Set if yeller uses the waveform channel
-; - bit 7: Set if yeller uses the noise channel
-; 
-; Start address must be four bytes after a 256-byte alignment.
+; States of the different yellers.
 wYellerStates::
-    ds YELLER_SIZE * MAX_NUM_YELLERS
+FOR N, MAX_NUM_YELLERS
+    .flags_{d:N} ds 1
+    .nextStepDelay_{d:N} ds 1
+    .stepPointer_{d:N} ds 2
+ENDR
+.end::
 
+; Special streaming yeller, for compressed music.
 wStreamingYellerState::
     ; The index into `wMusicDecompressionBuffer` marking the end of currently
     ; decompressed data.
@@ -1159,7 +1159,7 @@ wStreamingYellerState::
 
 
 ; This section contains memory used internally by the sound system.
-SECTION "SOUND INTERNAL", wramx, align[8]
+SECTION "SOUND INTERNAL", WRAMX, ALIGN[8]
 
 ; A 256-byte ring buffer for streamed music.
 ; Written to and read from by the LZ77 decompression system.
