@@ -29,7 +29,8 @@ DEF AUDIO_ROMX_BANK EQU 2
 ; Resides in bank 0 for easy access.
 SECTION "SOUND INTERFACE", ROM0
 
-; Allocates a yeller and initializes it to play the sound effect starting at the specified address.
+; Allocates a yeller and initializes it to play the sound effect starting at the specified address.  
+; Lives in ROM0.
 ; 
 ; Input:
 ;   - `bc`: Address of sound effect. Expected to be in the same ROM bank as the sound playback engine.
@@ -40,23 +41,24 @@ SECTION "SOUND INTERFACE", ROM0
 ; Destroys: all
 PlaySound::
     ; Find available yeller
-    ld hl, wYellerStates + YELLER_SIZE * (MAX_NUM_YELLERS - 2)
-    :
+    ld hl, wYellerStates
+    .findYeller
         ; Check if this yeller is vacant
-        ld a, [hl]
-        or a
-        jr z, :+
+        bit YELLER_FLAGB_IS_OCCUPIED, [hl]
+        jr z, .foundYeller
 
         ; Iterate to next yeller, or return if this is the last
         ld a, l
-        sub a, YELLER_SIZE
+        add a, YELLER_SIZE
+        cp a, low(wYellerStates.end)
         ret z
         ld l, a 
-        jr :-
-    :
+        jr .findYeller
+    ;
 
     ; Initialize yeller
     ; Set yeller flags
+    .foundYeller
     ld a, YELLER_FLAGF_IS_OCCUPIED
     ld [hl+], a
 
@@ -72,8 +74,12 @@ PlaySound::
     ld [hl+], a
 
     ret
+;
 
-; Resets the music yeller and sets it to play the requested music.
+
+
+; Resets the music yeller and sets it to play the requested music.  
+; Lives in ROM0.
 ; 
 ; Input:
 ;   - `bc`: Address of music data. Expected to be in the same ROM bank as the sound playback engine.
@@ -133,6 +139,9 @@ PlayMusic::
 
     ; And we done
     ret
+;
+
+
 
 ; This section contains everything sound-related, including both the sound effects and the
 ; code for playing them.
