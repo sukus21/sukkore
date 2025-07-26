@@ -1104,12 +1104,12 @@ EpicTestSoundTwo::
 
 
 
-MiiChannelSong:: INCBIN "MiiChannel.yellercode"
-SchombatSong:: INCBIN "Schombat.yellercode"
-HisWorldSong:: INCBIN "HisWorld.yellercode"
-WheelOfMisfortuneSong:: INCBIN "WheelOfMisfortune.yellercode"
-SocialAxhogSong:: INCBIN "SocialAxhog.yellercode"
-ExpiredMilkSong:: INCBIN "ExpiredMilk.yellercode"
+MiiChannelSong:: INCBIN "sound/music/Mii Channel.yellercode"
+SchombatSong:: INCBIN "sound/music/Schombat.yellercode"
+HisWorldSong:: INCBIN "sound/music/His World.yellercode"
+WheelOfMisfortuneSong:: INCBIN "sound/music/Wheel of Misfortune.yellercode"
+SocialAxhogSong:: INCBIN "sound/music/Social Axhog.yellercode"
+ExpiredMilkSong:: INCBIN "sound/music/Expired Milk v2.yellercode"
 
 
 

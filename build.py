@@ -63,6 +63,34 @@ def buildGfxFolder(path):
     
     return isError
 
+def buildTrackerboyFile(srcPath: str, trackerboyImporter: trackerboy_import.TrackerboyCompiler):
+    srcName, srcExt = os.path.splitext(srcPath)
+    if srcExt != ".tbm":
+        return False
+    
+    try:
+        trackerboyImporter.compile_file(srcPath, "build/sound/" + srcName + ".yellercode")
+    except:
+        return True
+    return False
+
+
+def buildTrackerboyFolder(path: str, trackerboyImporter: trackerboy_import.TrackerboyCompiler):
+    totalDirs = []
+    isError = False
+
+    for root, dirs, files in os.walk(path):
+        totalDirs += dirs
+        for filename in files:
+            error = buildTrackerboyFile(os.path.join(root, filename), trackerboyImporter)
+            isError = isError or error
+
+    for dirname in totalDirs:
+        error = buildTrackerboyFolder(os.path.join(root, dirname), trackerboyImporter)
+        isError = isError or error
+    
+    return isError
+
 def buildAsmFile(srcPath):
     srcName, srcExt = os.path.splitext(srcPath)
     if srcExt != ".asm":
@@ -106,7 +134,7 @@ def buildAsmFile(srcPath):
         "-p", "255",
         "-i", "source",
         "-i", "build/gfx/source",
-        "-i", "build/sound",
+        "-i", "build/sound/source",
         "-o", objPath,
         "-M", depPath,
         srcPath,
@@ -146,14 +174,9 @@ def build():
     
     # Compile TrackerBoy music
     print("\nTrackerboy compile step")
-    trackerboy_importer = trackerboy_import.TrackerboyCompiler()
-    trackerboy_importer.compile_file("source/sound/music/Mii Channel.tbm", "build/sound/MiiChannel.yellercode")
-    trackerboy_importer.compile_file("source/sound/music/Wheel of Misfortune.tbm", "build/sound/WheelOfMisfortune.yellercode")
-    trackerboy_importer.compile_file("source/sound/music/Schombat.tbm", "build/sound/Schombat.yellercode")
-    trackerboy_importer.compile_file("source/sound/music/His World.tbm", "build/sound/HisWorld.yellercode")
-    trackerboy_importer.compile_file("source/sound/music/Social Axhog.tbm", "build/sound/SocialAxhog.yellercode")
-    trackerboy_importer.compile_file("source/sound/music/Expired Milk v2.tbm", "build/sound/ExpiredMilk.yellercode")
-    trackerboy_importer.output_wavetable("build/sound/WaveTable.bin")
+    trackerboyImporter = trackerboy_import.TrackerboyCompiler()
+    buildTrackerboyFolder("source", trackerboyImporter)
+    trackerboyImporter.output_wavetable("build/sound/source/WaveTable.bin")
 
     # Assemble source files with rgbasm
     print("\nRGBASM step...")
