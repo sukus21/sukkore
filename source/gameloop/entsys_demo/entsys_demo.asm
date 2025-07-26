@@ -4,7 +4,6 @@ INCLUDE "macro/numtohex.inc"
 INCLUDE "macro/relpointer.inc"
 INCLUDE "vqueue/vqueue.inc"
 INCLUDE "gameloop/entsys_demo/vram.inc"
-INCLUDE "macro/farcall.inc"
 
 SECTION "TESTLOOP DATA", ROMX
 
@@ -96,17 +95,6 @@ GameloopTest::
     ldh [rLCDC], a
     call WaitVBlank
 
-    ; Initialize audio
-    farcall InitAudio
-
-    ; Play some nice music :{)
-    ld bc, MiiChannelSong
-    call PlayMusic
-
-    ; Also remember what song we're playing
-    xor a
-    ld [wCurrSongId], a
-
     ; Main loop
     .loop
     call ReadInput
@@ -123,85 +111,6 @@ GameloopTest::
         xor a
         ld [hl], a
     :
-
-    ; Play sound when removing stuff
-    ld a, [wInputPressed]
-    bit PADB_B, a
-    jr z, :+
-        ld bc, EpicTestSoundTwo
-        call PlaySound
-    :
-
-    ; Play sound when putting stuff
-    ld a, [wInputPressed]
-    bit PADB_A, a
-    jr z, :+
-        ld bc, EpicTestSoundOne
-        call PlaySound
-    :
-
-    ; Switch music when pressing start
-    ld a, [wInputPressed]
-    bit PADB_START, a
-    jr z, .MusicSelectEnd
-        ; Get the current song ID
-        ld a, [wCurrSongId]
-
-        ; Get the next song ID
-        inc a
-        cp a, 6
-        jr nz, :+
-            xor a
-        :
-
-        ; Store the new song ID
-        ld [wCurrSongId], a
-
-        ; Select the song pointer
-        ; Dirty method, but I kinda just want this done
-        or a
-        jr nz, :+
-            ld bc, MiiChannelSong
-            call PlayMusic
-            jr .MusicSelectEnd
-        :
-
-        dec a
-        jr nz, :+
-            ld bc, SchombatSong
-            call PlayMusic
-            jr .MusicSelectEnd
-        :
-
-        dec a
-        jr nz, :+
-            ld bc, HisWorldSong
-            call PlayMusic
-            jr .MusicSelectEnd
-        :
-
-        dec a
-        jr nz, :+
-            ld bc, WheelOfMisfortuneSong
-            call PlayMusic
-            jr .MusicSelectEnd
-        :
-
-        dec a
-        jr nz, :+
-            ld bc, SocialAxhogSong
-            call PlayMusic
-            jr .MusicSelectEnd
-        :
-
-        dec a
-        jr nz, :+
-            ld bc, ExpiredMilkSong
-            call PlayMusic
-            jr .MusicSelectEnd
-        :
-
-    .MusicSelectEnd
 
     ; Get sprite Y-position
     add a, a
@@ -416,13 +325,6 @@ GameloopTest::
     inc l
     ld [hl], e
 
-    ; Do sound updates
-    farcall UpdateAudio
-    
-    ; Get back to our own ROM bank
-    ld a, BANK(TestloopFont)
-    ld [$2000], a
-
     ; Wait for Vblank
     ld h, high(wOAM)
     call SpriteFinish
@@ -480,5 +382,3 @@ wAllocationDemoY: ds 1
 wAllocationDemoSize: ds 1
 wAllocationDemoPerformance: ds 1
 wAllocationDemoCounter:: ds 1
-
-wCurrSongId: ds 1
