@@ -11,7 +11,8 @@ If you do decide to use it, credit would be appreciated, but is not required.
 - [hardware.inc](https://github.com/gbdev/hardware.inc)
 - [Visual Studio Code](https://code.visualstudio.com/)
 - [Emulicious](https://emulicious.net/) + [Debug Adapter for VScode](https://marketplace.visualstudio.com/items?itemName=emulicious.emulicious-debugger)
-- [Python](https://www.python.org/)
+- [Trackerboy](https://www.trackerboy.org/) for Music creation
+- [Python](https://www.python.org/) for build scripts
 
 ## Building:
 Assumes that `rgbasm`, `rgblink` and `rgbfix` are available in your `path` variable.
