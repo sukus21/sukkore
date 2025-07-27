@@ -2,6 +2,8 @@ import os
 import subprocess as cmd
 import sys
 
+import trackerboy_import
+
 dirtyCheck = True
 
 def escapeCli(inArgs):
@@ -61,6 +63,34 @@ def buildGfxFolder(path):
     
     return isError
 
+def buildTrackerboyFile(srcPath: str, trackerboyImporter: trackerboy_import.TrackerboyCompiler):
+    srcName, srcExt = os.path.splitext(srcPath)
+    if srcExt != ".tbm":
+        return False
+    
+    try:
+        trackerboyImporter.compile_file(srcPath, "build/sound/" + srcName + ".yellercode")
+    except:
+        return True
+    return False
+
+
+def buildTrackerboyFolder(path: str, trackerboyImporter: trackerboy_import.TrackerboyCompiler):
+    totalDirs = []
+    isError = False
+
+    for root, dirs, files in os.walk(path):
+        totalDirs += dirs
+        for filename in files:
+            error = buildTrackerboyFile(os.path.join(root, filename), trackerboyImporter)
+            isError = isError or error
+
+    for dirname in totalDirs:
+        error = buildTrackerboyFolder(os.path.join(root, dirname), trackerboyImporter)
+        isError = isError or error
+    
+    return isError
+
 def buildAsmFile(srcPath):
     srcName, srcExt = os.path.splitext(srcPath)
     if srcExt != ".asm":
@@ -104,6 +134,7 @@ def buildAsmFile(srcPath):
         "-p", "255",
         "-i", "source",
         "-i", "build/gfx/source",
+        "-i", "build/sound/source",
         "-o", objPath,
         "-M", depPath,
         srcPath,
@@ -140,6 +171,12 @@ def build():
     error = buildGfxFolder("source")
     if error == True:
         os._exit(1)
+    
+    # Compile TrackerBoy music
+    print("\nTrackerboy compile step")
+    trackerboyImporter = trackerboy_import.TrackerboyCompiler()
+    buildTrackerboyFolder("source", trackerboyImporter)
+    trackerboyImporter.output_wavetable("build/sound/source/WaveTable.bin")
 
     # Assemble source files with rgbasm
     print("\nRGBASM step...")

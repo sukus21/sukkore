@@ -195,6 +195,10 @@ GameloopError:
         ldh [rLCDC], a
     :
 
+    ; Turn off audio
+    xor a
+    ldh [rNR52], a
+
     ; Reset background scrolling
     ld a, -16
     ldh [rSCX], a
@@ -702,6 +706,8 @@ ErrorMessages:
     ErrorRomXBankMarker::   create_message "ROMX BANK W/O MARK"
     ErrorRomXBankCount::    create_message "BAD ROMX BANK COUNT"
     ErrorSramBankCount::    create_message "BAD SRAM BANK COUNT"
+    ErrorInvalidYellerOpcode::    create_message "INVALID YELLER OPCODE"
+    ErrorInvalidGameData::    create_message "INVALID GAME DATA"
     POPC
 ;
 

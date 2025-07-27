@@ -1,0 +1,51 @@
+Although Trackerboy is open source, I (tecanec) could not find the source code for encoding and decoding module files in the github repo, nor could I find the data structure containing the actual module data. What information I could gather on the .tbm file format thus stem from my own attempt at interpreting the data through a hex editor. Despite my best attempts, my findings may therefore be inaccurate.
+
+What I could gather:
+- Ints are little-endian
+- Sections start with four-byte tag, then four-byte length which doesn't include section header.
+- Every wave and song(?) gets its own section.
+- Header:
+	- Always 160 bytes in total
+	* The string "\0TRACKERBOY\0" (12 bytes)
+	* Unknown (16 bytes)
+	* Title (32 bytes)
+	* Author (32 bytes)
+	* Copyright (32 bytes)
+	* Unknown (36 bytes)
+- COMM sections plainly contain whatever is written via "Module>Comments..." in the menu.
+- SONG sections:
+	* Name length (2 bytes)
+	* Name (Variable length; Not null terminated)
+	* Rows/beat (1 byte)
+	* Rows/measure (1 byte)
+	* Speed (1 byte)
+	* Number of segments minus one (1 byte)
+	* Rows per segment minus one (1 byte)
+	* Number of patterns (1 byte)
+	* Unknown (2 bytes) (Second byte may be packed per-channel data)
+	* Segments per pattern (one byte per channel per segment)
+	* Per pattern:
+		* Channel (1 byte)
+		* Index (1 byte)
+			- Index is per channel
+		* Number of notes minus one (1 byte)
+		* Per note:
+			* Time (1 byte)
+			* Tone (1 byte)
+				- 1 means C2; Others count up from there
+				- 0x55 seems to mean break
+				- 0 could mean "empty"
+			* Unknown (1 byte)
+			* Per effect (always encodes 3):
+				* Effect code (1 byte)
+					- 0 means no effect
+					- 1 means pattern jump (effect B)
+					- 6 means envelope (possibly also wave form)
+					- 7 means pulse wave duty (possibly also wave volume and noise LSR width)
+				* Effect parameter (1 byte)
+- WAVE sections:
+	* ID (1 byte)
+	* Name length (2 bytes)
+	* Name (Variable length; Not null-terminated)
+	* Wave shape (16 bytes; Presumably same format used on GB hardware)
+- File ends with "\0YOBREKCART\0" (that's "TRACKERBOY" backwards surrounded by nulls)
