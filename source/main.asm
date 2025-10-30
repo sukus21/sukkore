@@ -182,6 +182,7 @@ Main::
 
     ; Initialize ALL the things
     call OamDmaInit
+    call ThreadsInit
     call VQueueInit
     call EntsysInit
     call ColorInit

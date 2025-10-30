@@ -702,7 +702,7 @@ ErrorMessages:
     ErrorStrings:
     ErrorEntityOverflow::   create_message "ENTITY OVERFLOW"
     ErrorColorRequired::    create_message "ONLY PLAYS ON CGB"
-    ErrorVQueueOverflow::   create_message "VQUEUE OVERFLOW"
+    ErrorThreadOverflow::   create_message "THREAD OVERFLOW"
     ErrorRomXBankMarker::   create_message "ROMX BANK W/O MARK"
     ErrorRomXBankCount::    create_message "BAD ROMX BANK COUNT"
     ErrorSramBankCount::    create_message "BAD SRAM BANK COUNT"

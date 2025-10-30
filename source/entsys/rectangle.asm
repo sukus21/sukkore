@@ -1,5 +1,5 @@
 INCLUDE "hardware.inc/hardware.inc"
-INCLUDE "vqueue/vqueue.inc"
+INCLUDE "threads/vqueue.inc"
 INCLUDE "config.inc"
 
 

@@ -2,8 +2,9 @@ INCLUDE "hardware.inc/hardware.inc"
 INCLUDE "macro/memcpy.inc"
 INCLUDE "macro/numtohex.inc"
 INCLUDE "macro/relpointer.inc"
-INCLUDE "vqueue/vqueue.inc"
+INCLUDE "threads/vqueue.inc"
 INCLUDE "gameloop/entsys_demo/vram.inc"
+
 
 SECTION "TESTLOOP DATA", ROMX
 

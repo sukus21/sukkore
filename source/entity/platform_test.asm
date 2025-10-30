@@ -1,6 +1,5 @@
 INCLUDE "hardware.inc/hardware.inc"
-INCLUDE "entsys/entsys.inc"
-INCLUDE "vqueue/vqueue.inc"
+
 
 SECTION "ENTITY PLATFORM TEST", ROMX
 

@@ -1,6 +1,7 @@
 INCLUDE "hardware.inc/hardware.inc"
 INCLUDE "macro/memcpy.inc"
-INCLUDE "vqueue/vqueue.inc"
+INCLUDE "threads/vqueue.inc"
+
 
 SECTION "PAINTER", ROM0
 

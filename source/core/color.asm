@@ -1,7 +1,8 @@
 INCLUDE "hardware.inc/hardware.inc"
 INCLUDE "macro/color.inc"
 INCLUDE "macro/memcpy.inc"
-INCLUDE "vqueue/vqueue.inc"
+INCLUDE "threads/vqueue.inc"
+
 
 SECTION "COLOR", ROM0
 

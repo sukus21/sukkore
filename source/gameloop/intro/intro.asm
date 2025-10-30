@@ -1,8 +1,9 @@
 INCLUDE "hardware.inc/hardware.inc"
 INCLUDE "macro/color.inc"
 INCLUDE "macro/farcall.inc"
-INCLUDE "vqueue/vqueue.inc"
+INCLUDE "threads/vqueue.inc"
 INCLUDE "gameloop/intro/vram.inc"
+
 
 DEF INTRO_FADE_FRAMES EQU 31
 DEF INTRO_WAIT_FRAMES EQU 44
@@ -11,6 +12,7 @@ RSRESET
 DEF INTRO_STATE_IN RB 1
 DEF INTRO_STATE_WAIT RB 1
 DEF INTRO_STATE_OUT RB 1
+
 
 
 SECTION "INTRO", ROMX, ALIGN[8]
